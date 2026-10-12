@@ -38,6 +38,7 @@ una sola vez, en orden, y queda registrada en la tabla `schema_migrations`.
 | `0002_row_level_security.sql` | Row-Level Security: PostgreSQL solo entrega las filas del equipo de quien consulta |
 | `0003_player_details.sql` | Pie hábil del jugador (`preferred_foot`: RIGHT, LEFT o BOTH) |
 | `0004_notifications.sql` | Notificaciones del equipo (la campana) y quién leyó cada una, con RLS por equipo y por usuario |
+| `0005_proximity_network.sql` | Red de cercanía de cada análisis (grafo + BFS de la IA) guardada como JSON en `video_analyses.proximity_network` |
 
 Base nueva: primero `sql/schema.sql` y luego las migraciones.
 
