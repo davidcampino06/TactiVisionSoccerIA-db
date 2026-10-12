@@ -11,11 +11,11 @@ SELECT set_config('demo.team_id', (SELECT id FROM teams ORDER BY created_at LIMI
 
 -- 2) Act as the application role with NO identity: nothing is visible.
 SET LOCAL ROLE tactivision_app;
-SELECT 'app, no team' AS who, count(*) AS matches FROM matches;
+SELECT 'app, no team' AS who, count(*) AS matches, (SELECT count(*) FROM notifications) AS notifications FROM matches;
 
--- 3) Identify as the first team: only its matches come back (same query, no WHERE).
+-- 3) Identify as the first team: only its rows come back (same queries, no WHERE).
 SELECT set_config('app.current_team_id', current_setting('demo.team_id'), true);
-SELECT 'app, first team' AS who, count(*) AS matches FROM matches;
+SELECT 'app, first team' AS who, count(*) AS matches, (SELECT count(*) FROM notifications) AS notifications FROM matches;
 
 -- 4) Policies installed per table.
 SELECT tablename, policyname FROM pg_policies WHERE schemaname = 'public' ORDER BY tablename;
