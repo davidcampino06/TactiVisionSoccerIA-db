@@ -14,7 +14,7 @@ psql "postgresql://USER:PASSWORD@HOST/DB?sslmode=require" -f sql/schema.sql
 `system_status`, `users`, `teams`, `players`, `player_team_history`, `matches`, `match_events`,
 `formations`, `match_formations`, `tactical_plays`, `tactical_play_versions`, `match_tactical_plays`,
 `videos`, `video_analyses`, `detections`, `tactical_indicators`, `ai_recommendations`,
-`recommendation_indicators`, `reports`.
+`recommendation_indicators`, `reports`, `notifications` y `notification_reads` (migración 0004).
 
 ## Desviaciones mínimas respecto al ERD (justificadas)
 
@@ -37,6 +37,7 @@ una sola vez, en orden, y queda registrada en la tabla `schema_migrations`.
 | `0001_schema_migrations.sql` | Tabla con el historial de migraciones aplicadas |
 | `0002_row_level_security.sql` | Row-Level Security: PostgreSQL solo entrega las filas del equipo de quien consulta |
 | `0003_player_details.sql` | Pie hábil del jugador (`preferred_foot`: RIGHT, LEFT o BOTH) |
+| `0004_notifications.sql` | Notificaciones del equipo (la campana) y quién leyó cada una, con RLS por equipo y por usuario |
 
 Base nueva: primero `sql/schema.sql` y luego las migraciones.
 
@@ -58,6 +59,8 @@ consultara sin filtrar por equipo, la base de datos no devolvería filas de otro
   `app.current_team_id`. Las tablas hijas heredan la regla de su padre:
   equipo → partido → video → análisis → detecciones.
 - El administrador solo puede **leer** los datos generales de `teams`; nada táctico.
+- `notifications` se filtra por equipo como `matches`; en `notification_reads` cada usuario solo ve
+  y escribe sus propias marcas de leído.
 - `users`, `formations` (catálogo compartido) y `system_status` no tienen RLS.
 - Trabajo del sistema (análisis en segundo plano, recuperación al reiniciar, búsqueda por código de
   invitación) usa `app.bypass_rls = 'on'`.
