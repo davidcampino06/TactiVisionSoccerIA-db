@@ -1,0 +1,68 @@
+# Checks the database scripts on an empty PostgreSQL:
+#   1. sql/schema.sql loads without errors
+#   2. every migration applies in order (scripts/apply_migrations.py)
+#   3. a second run finds nothing pending
+#   4. every migration can run again without errors (they are idempotent)
+#   5. the Row-Level Security demo (sql/verify_rls.sql) runs
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  migrations:
+    name: Esquema y migraciones
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: tactivision_ci
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U postgres"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+    env:
+      DATABASE_URL: postgresql://postgres:postgres@localhost:5432/tactivision_ci
+    steps:
+      - uses: actions/checkout@v5
+
+      - uses: actions/setup-python@v6
+        with:
+          python-version: "3.13"
+
+      - name: Instalar psycopg2
+        run: pip install psycopg2-binary
+
+      - name: 1. Esquema base
+        run: psql -v ON_ERROR_STOP=1 "$DATABASE_URL" -f sql/schema.sql
+
+      - name: 2. Aplicar migraciones
+        run: python scripts/apply_migrations.py
+
+      - name: 3. Segunda ejecución sin pendientes
+        run: python scripts/apply_migrations.py | tee run.log && grep -q "Nothing to apply." run.log
+
+      - name: 4. Migraciones idempotentes
+        run: |
+          for migration in migrations/*.sql; do
+            echo "Re-running $migration"
+            psql -q -v ON_ERROR_STOP=1 "$DATABASE_URL" -f "$migration"
+          done
+
+      - name: 5. Demostración de Row-Level Security
+        run: psql -v ON_ERROR_STOP=1 "$DATABASE_URL" -f sql/verify_rls.sql
