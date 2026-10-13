@@ -1,5 +1,10 @@
 # TactiSoccerIA-db
 
+[![CI](https://github.com/davidcampino06/TactiVisionSoccerIA-db/actions/workflows/ci.yml/badge.svg)](https://github.com/davidcampino06/TactiVisionSoccerIA-db/actions/workflows/ci.yml)
+
+Integración continua (GitHub Actions, `.github/workflows/ci.yml`): en cada push a `main` y en cada
+pull request se ejecutan esquema, migraciones (dos veces) y demostración de RLS.
+
 Esquema PostgreSQL de TactiVision IA basado en el **TactiVision Database ERD**.
 
 `sql/schema.sql` es **idempotente**: usa `CREATE ... IF NOT EXISTS`, no borra tablas ni datos y
