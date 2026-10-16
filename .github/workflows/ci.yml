@@ -4,6 +4,11 @@
 #   3. a second run finds nothing pending
 #   4. every migration can run again without errors (they are idempotent)
 #   5. the Row-Level Security demo (sql/verify_rls.sql) runs
+#   6. the rule checks (sql/checks.sql): audit log, rejected rows, views
+#   7. docs/DICCIONARIO_DE_DATOS.md matches the schema (regenerated and compared)
+#   8. the demo data loads twice without duplicates, and the health report runs on it
+#   9. a backup restored into a second empty database gives back the same data
+#  10. removing the demo data leaves no demo rows
 name: CI
 
 on:
@@ -66,3 +71,39 @@ jobs:
 
       - name: 5. Demostración de Row-Level Security
         run: psql -v ON_ERROR_STOP=1 "$DATABASE_URL" -f sql/verify_rls.sql
+
+      - name: 6. Reglas, auditoría y vistas
+        run: psql -v ON_ERROR_STOP=1 "$DATABASE_URL" -f sql/checks.sql
+
+      - name: 7. Diccionario de datos al día
+        run: |
+          python scripts/data_dictionary.py
+          git diff --exit-code docs/DICCIONARIO_DE_DATOS.md \
+            || (echo "Regenerate it: python scripts/data_dictionary.py" && exit 1)
+
+      - name: 8. Datos de demostración (dos veces) y reporte de salud
+        run: |
+          psql -q -v ON_ERROR_STOP=1 "$DATABASE_URL" -f sql/seed_demo.sql
+          psql -q -v ON_ERROR_STOP=1 "$DATABASE_URL" -f sql/seed_demo.sql
+          test "$(psql -At "$DATABASE_URL" -c "SELECT count(*) FROM players WHERE team_id = 'demo-team'")" = 14
+          psql -v ON_ERROR_STOP=1 "$DATABASE_URL" -f sql/verify_data.sql
+
+      - name: 9. Respaldo y restauración
+        env:
+          RESTORE_URL: postgresql://postgres:postgres@localhost:5432/tactivision_restore
+        run: |
+          python scripts/backup_database.py --output backups/ci
+          psql -v ON_ERROR_STOP=1 "$DATABASE_URL" -c "CREATE DATABASE tactivision_restore"
+          psql -q -v ON_ERROR_STOP=1 "$RESTORE_URL" -f sql/schema.sql
+          DATABASE_URL="$RESTORE_URL" python scripts/apply_migrations.py
+          DATABASE_URL="$RESTORE_URL" python scripts/backup_database.py --restore backups/ci --yes
+          for table in users teams players matches videos video_analyses detections tactical_indicators audit_log; do
+            query="SELECT md5(coalesce(string_agg(t::text, '|' ORDER BY t::text), '')) FROM $table t"
+            test "$(psql -At "$DATABASE_URL" -c "$query")" = "$(psql -At "$RESTORE_URL" -c "$query")" \
+              || (echo "$table differs after the restore" && exit 1)
+          done
+
+      - name: 10. Quitar los datos de demostración
+        run: |
+          psql -q -v ON_ERROR_STOP=1 "$DATABASE_URL" -f sql/seed_demo_remove.sql
+          test "$(psql -At "$DATABASE_URL" -c "SELECT (SELECT count(*) FROM teams WHERE id = 'demo-team') + (SELECT count(*) FROM players WHERE id LIKE 'demo-%') + (SELECT count(*) FROM users WHERE id LIKE 'demo-%')")" = 0
