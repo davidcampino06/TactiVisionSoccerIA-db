@@ -1,0 +1,6 @@
+# Backups hold personal data and password hashes: never commit them.
+backups/
+
+__pycache__/
+*.pyc
+.env
