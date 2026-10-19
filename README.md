@@ -53,6 +53,7 @@ una sola vez, en orden, y queda registrada en la tabla `schema_migrations`.
 | `0009_report_views.sql` | Vistas de consulta (`v_match_summary`, `v_analysis_indicators`, `v_player_participation`, `v_open_issues`) que respetan RLS |
 | `0010_data_dictionary.sql` | Descripción en español de cada tabla, columna y vista (`COMMENT ON`), base del diccionario de datos |
 | `0011_recommendation_team.sql` | Equipo al que se refiere cada posible problema (`TEAM_A`, `TEAM_B` o `MATCH`) |
+| `0012_analysis_team_colors.sql` | Color de camiseta de cada equipo en el análisis y advertencias sin límite de 255 caracteres |
 
 Base nueva: primero `sql/schema.sql` y luego las migraciones.
 
