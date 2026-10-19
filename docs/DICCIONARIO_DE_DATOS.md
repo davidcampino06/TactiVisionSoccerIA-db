@@ -163,10 +163,12 @@ Posibles problemas tácticos y recomendaciones de la IA.
 | `created_at` | timestamp | no | CURRENT_TIMESTAMP | Fecha. |
 | `status` | varchar(50) | no | 'GENERATED' | GENERATED, REVIEWED, CONFIRMED o DISMISSED (revisión humana). |
 | `team` | varchar(20) | sí |  | Equipo al que se refiere: TEAM_A, TEAM_B o MATCH (métrica del partido); vacío en análisis antiguos. |
+| `explanation` | text | sí |  | JSON: explicación en lenguaje de fútbol (qué vio la IA, qué significa, qué trabajar) y un cuadro real que lo muestra. |
 
 **Reglas**
 
 - Regla: `CHECK (((confidence >= (0)::numeric) AND (confidence <= (1)::numeric)))`
+- Regla: `CHECK (((explanation IS NULL) OR ((explanation)::jsonb ? 'seen'::text)))`
 - Regla: `CHECK (((status)::text = ANY ((ARRAY['GENERATED'::character varying, 'REVIEWED'::character varying, 'CONFIRMED'::character varying, 'DISMISSED'::character varying])::text[])))`
 - Regla: `CHECK (((team IS NULL) OR ((team)::text = ANY ((ARRAY['TEAM_A'::character varying, 'TEAM_B'::character varying, 'MATCH'::character varying])::text[]))))`
 - Regla: `CHECK (((severity)::text = ANY ((ARRAY['HIGH'::character varying, 'MEDIUM'::character varying, 'LOW'::character varying])::text[])))`
