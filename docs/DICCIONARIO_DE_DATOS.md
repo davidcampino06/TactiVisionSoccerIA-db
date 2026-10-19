@@ -631,14 +631,17 @@ Análisis de un video hechos por el servicio de IA.
 | `model_version` | varchar(50) | sí |  | Versión del modelo. |
 | `started_at` | timestamp | sí |  | Inicio. |
 | `completed_at` | timestamp | sí |  | Fin. |
-| `warning_message` | varchar(255) | sí |  | Advertencia o motivo del fallo. |
+| `warning_message` | text | sí |  | Advertencias del análisis (todas, sin recortar) o el motivo del fallo. |
 | `proximity_network` | text | sí |  | JSON de la red de cercanía (grafo + BFS). |
+| `team_a_color` | varchar(7) | sí |  | Color de camiseta del Equipo A según la IA (#rrggbb); vacío en análisis antiguos o de simulación sin color. |
+| `team_b_color` | varchar(7) | sí |  | Color de camiseta del Equipo B según la IA (#rrggbb); vacío en análisis antiguos o de simulación sin color. |
 
 **Reglas**
 
 - Regla: `CHECK (((completed_at IS NULL) OR (started_at IS NULL) OR (completed_at >= started_at)))`
 - Regla: `CHECK (((analysis_mode)::text = ANY ((ARRAY['REAL_VIDEO_ANALYSIS'::character varying, 'SIMULATION_MODE'::character varying])::text[])))`
 - Regla: `CHECK (((status)::text = ANY ((ARRAY['PENDING'::character varying, 'PROCESSING'::character varying, 'COMPLETED'::character varying, 'FAILED'::character varying, 'CANCELLED'::character varying])::text[])))`
+- Regla: `CHECK ((((team_a_color IS NULL) OR ((team_a_color)::text ~ '^#[0-9a-f]{6}$'::text)) AND ((team_b_color IS NULL) OR ((team_b_color)::text ~ '^#[0-9a-f]{6}$'::text))))`
 - Clave foránea → `videos`: `FOREIGN KEY (video_id) REFERENCES videos(id) ON DELETE CASCADE`
 - Clave primaria: `PRIMARY KEY (id)`
 
