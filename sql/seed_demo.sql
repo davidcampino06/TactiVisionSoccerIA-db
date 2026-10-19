@@ -754,4 +754,8 @@ ON CONFLICT (id) DO NOTHING;
 INSERT INTO match_tactical_plays (id, match_id, tactical_play_id) VALUES ('demo-match-play-1', 'demo-match-6', 'demo-play-1')
 ON CONFLICT (id) DO NOTHING;
 
+-- Shirt colour of each team in the demo analyses (migration 0012): Atlético Demo in yellow, rivals in blue
+UPDATE video_analyses SET team_a_color = '#e3b23c', team_b_color = '#3d6db5'
+WHERE id IN ('demo-analysis-2', 'demo-analysis-3', 'demo-analysis-4', 'demo-analysis-5') AND team_a_color IS NULL;
+
 COMMIT;
