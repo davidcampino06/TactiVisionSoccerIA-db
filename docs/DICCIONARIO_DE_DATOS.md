@@ -350,16 +350,18 @@ Partidos de cada equipo.
 
 ### `notification_reads`
 
-Qué notificaciones leyó cada usuario.
+Qué notificaciones leyó (o eliminó de su campana) cada usuario.
 
 | Columna | Tipo | Nulo | Por defecto | Descripción |
 |---|---|---|---|---|
 | `notification_id` | varchar(36) | no |  | Notificación. |
 | `user_id` | varchar(36) | no |  | Usuario. |
 | `read_at` | timestamp | no | CURRENT_TIMESTAMP | Fecha de lectura. |
+| `hidden_at` | timestamp | sí |  | Cuándo el usuario eliminó la notificación de su campana; vacío si la sigue viendo. Los demás del equipo la siguen viendo. |
 
 **Reglas**
 
+- Regla: `CHECK (((hidden_at IS NULL) OR (hidden_at >= read_at)))`
 - Clave foránea → `notifications`: `FOREIGN KEY (notification_id) REFERENCES notifications(id) ON DELETE CASCADE`
 - Clave foránea → `users`: `FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE`
 - Clave primaria: `PRIMARY KEY (notification_id, user_id)`
