@@ -55,6 +55,7 @@ una sola vez, en orden, y queda registrada en la tabla `schema_migrations`.
 | `0011_recommendation_team.sql` | Equipo al que se refiere cada posible problema (`TEAM_A`, `TEAM_B` o `MATCH`) |
 | `0012_analysis_team_colors.sql` | Color de camiseta de cada equipo en el análisis y advertencias sin límite de 255 caracteres |
 | `0013_recommendation_explanation.sql` | Explicación de cada posible problema en lenguaje de fútbol y un cuadro real que lo muestra (JSON) |
+| `0014_notification_delete.sql` | Eliminar notificaciones de la propia campana (`hidden_at`): el resto del equipo las sigue viendo |
 
 Base nueva: primero `sql/schema.sql` y luego las migraciones.
 
