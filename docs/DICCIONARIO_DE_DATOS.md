@@ -390,7 +390,7 @@ Notificaciones de cada equipo (la campana).
 
 **Reglas**
 
-- Regla: `CHECK (((event)::text = ANY ((ARRAY['ANALYSIS_COMPLETED'::character varying, 'ANALYSIS_FAILED'::character varying, 'ANALYSIS_CANCELLED'::character varying, 'TACTICAL_ALERT'::character varying, 'ANALYST_JOINED'::character varying])::text[])))`
+- Regla: `CHECK (((event)::text = ANY ((ARRAY['ANALYSIS_COMPLETED'::character varying, 'ANALYSIS_FAILED'::character varying, 'ANALYSIS_CANCELLED'::character varying, 'TACTICAL_ALERT'::character varying, 'ANALYST_JOINED'::character varying, 'PLAYER_RETURN_DUE'::character varying])::text[])))`
 - Clave foránea → `video_analyses`: `FOREIGN KEY (analysis_id) REFERENCES video_analyses(id) ON DELETE SET NULL`
 - Clave foránea → `matches`: `FOREIGN KEY (match_id) REFERENCES matches(id) ON DELETE SET NULL`
 - Clave foránea → `teams`: `FOREIGN KEY (team_id) REFERENCES teams(id) ON DELETE CASCADE`
@@ -436,20 +436,25 @@ Plantilla de cada equipo.
 | `last_name` | varchar(255) | no |  | Apellido. |
 | `shirt_number` | integer | sí |  | Dorsal (0 a 99). |
 | `position` | varchar(255) | sí |  | GOALKEEPER, DEFENDER, MIDFIELDER o FORWARD. |
-| `status` | varchar(255) | no | 'ACTIVE' | ACTIVE, INJURED, SUSPENDED o INACTIVE. |
+| `status` | varchar(255) | no | 'ACTIVE' | ACTIVE, INJURED, SUSPENDED, UNAVAILABLE (motivo personal u otro) o INACTIVE (de baja). |
 | `created_at` | timestamp | no | CURRENT_TIMESTAMP | Fecha de alta. |
 | `preferred_foot` | varchar(10) | sí |  | RIGHT, LEFT o BOTH. |
+| `availability_note` | varchar(255) | sí |  | Motivo de la ausencia, escrito por el entrenador (lesión, sanción, motivo personal). |
+| `expected_return` | date | sí |  | Fecha estimada de regreso; ese día la campana lo recuerda. |
+| `return_notified_on` | date | sí |  | Fecha de regreso que ya se recordó (para avisar una sola vez). |
 
 **Reglas**
 
+- Regla: `CHECK ((((status)::text = ANY ((ARRAY['INJURED'::character varying, 'SUSPENDED'::character varying, 'UNAVAILABLE'::character varying])::text[])) OR ((availability_note IS NULL) AND (expected_return IS NULL))))`
 - Regla: `CHECK (((preferred_foot IS NULL) OR ((preferred_foot)::text = ANY ((ARRAY['RIGHT'::character varying, 'LEFT'::character varying, 'BOTH'::character varying])::text[]))))`
 - Regla: `CHECK (((shirt_number >= 0) AND (shirt_number <= 99)))`
-- Regla: `CHECK (((status)::text = ANY ((ARRAY['ACTIVE'::character varying, 'INJURED'::character varying, 'SUSPENDED'::character varying, 'INACTIVE'::character varying])::text[])))`
+- Regla: `CHECK (((status)::text = ANY ((ARRAY['ACTIVE'::character varying, 'INJURED'::character varying, 'SUSPENDED'::character varying, 'UNAVAILABLE'::character varying, 'INACTIVE'::character varying])::text[])))`
 - Clave foránea → `teams`: `FOREIGN KEY (team_id) REFERENCES teams(id) ON DELETE SET NULL`
 - Clave primaria: `PRIMARY KEY (id)`
 
 **Índices**
 
+- `idx_players_expected_return`: `btree (team_id, expected_return) WHERE (expected_return IS NOT NULL)`
 - `idx_players_team`: `btree (team_id)`
 - `idx_players_team_shirt`: `btree (team_id, shirt_number)`
 
