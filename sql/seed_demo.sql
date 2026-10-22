@@ -777,4 +777,14 @@ ON CONFLICT (team_id) DO NOTHING;
 UPDATE video_analyses SET own_kit_color = '#e3b23c', own_team = 'TEAM_A'
 WHERE id IN ('demo-analysis-2', 'demo-analysis-3', 'demo-analysis-4', 'demo-analysis-5') AND own_team IS NULL;
 
+-- Why the unavailable players are out and when they should be back (migration 0016). Dates are
+-- relative to the day the seed is loaded, so the demo always shows one return in the future and one
+-- that is due today (the bell reminds it).
+UPDATE players SET availability_note = 'Esguince de tobillo derecho', expected_return = CURRENT_DATE + 10
+WHERE id = 'demo-player-12' AND status = 'INJURED' AND availability_note IS NULL;
+UPDATE players SET availability_note = 'Doble amarilla ante Atlético Rionegro: 1 fecha de sanción', expected_return = DATE '2026-11-09'
+WHERE id = 'demo-player-17' AND status = 'SUSPENDED' AND availability_note IS NULL;
+UPDATE players SET status = 'UNAVAILABLE', availability_note = 'Viaje familiar', expected_return = CURRENT_DATE
+WHERE id = 'demo-player-14' AND status = 'ACTIVE' AND availability_note IS NULL;
+
 COMMIT;
