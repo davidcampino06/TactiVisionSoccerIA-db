@@ -3,7 +3,7 @@
 > Generado con `scripts/data_dictionary.py` a partir de la base de datos (esquema + migraciones).
 > No se edita a mano: si cambia el esquema, se vuelve a generar.
 
-21 tablas y 4 vistas.
+22 tablas y 4 vistas.
 
 ## Diagrama entidad-relación
 
@@ -93,6 +93,9 @@ erDiagram
         varchar team_id FK
         varchar name
     }
+    team_crests {
+        varchar team_id PK
+    }
     teams {
         varchar id PK
         varchar coach_id FK
@@ -139,6 +142,7 @@ erDiagram
     users |o--o{ tactical_play_versions : "created_by"
     tactical_plays ||--o{ tactical_play_versions : "tactical_play_id"
     teams ||--o{ tactical_plays : "team_id"
+    teams ||--o{ team_crests : "team_id"
     users ||--o{ teams : "coach_id"
     teams |o--o{ users : "team_id"
     videos ||--o{ video_analyses : "video_id"
@@ -563,6 +567,24 @@ Jugadas diseñadas en el editor táctico.
 - Clave foránea → `teams`: `FOREIGN KEY (team_id) REFERENCES teams(id) ON DELETE CASCADE`
 - Clave primaria: `PRIMARY KEY (id)`
 
+### `team_crests`
+
+Escudo del equipo: una imagen PNG de 256 px por equipo, re-codificada por el backend.
+
+| Columna | Tipo | Nulo | Por defecto | Descripción |
+|---|---|---|---|---|
+| `team_id` | varchar(36) | no |  | Equipo dueño del escudo. |
+| `content_type` | varchar(20) | no |  | Tipo de la imagen guardada (siempre image/png). |
+| `image` | bytea | no |  | Bytes de la imagen PNG (máximo 300 KB). |
+| `updated_at` | timestamp | no | CURRENT_TIMESTAMP | Cuándo se cambió el escudo por última vez. |
+
+**Reglas**
+
+- Regla: `CHECK (((content_type)::text = 'image/png'::text))`
+- Regla: `CHECK (((octet_length(image) >= 1) AND (octet_length(image) <= 300000)))`
+- Clave foránea → `teams`: `FOREIGN KEY (team_id) REFERENCES teams(id) ON DELETE CASCADE`
+- Clave primaria: `PRIMARY KEY (team_id)`
+
 ### `teams`
 
 Equipos; cada entrenador tiene uno.
@@ -578,9 +600,11 @@ Equipos; cada entrenador tiene uno.
 | `invitation_code` | varchar(20) | no |  | Código para que un analista se una. |
 | `created_at` | timestamp | no | CURRENT_TIMESTAMP | Fecha de creación. |
 | `is_active` | boolean | no | true | Falso si el equipo fue desactivado. |
+| `kit_color` | varchar(7) | sí |  | Color habitual de la camiseta del equipo (#rrggbb); se propone al analizar un video. |
 
 **Reglas**
 
+- Regla: `CHECK (((kit_color IS NULL) OR ((kit_color)::text ~ '^#[0-9a-f]{6}$'::text)))`
 - Clave foránea → `users`: `FOREIGN KEY (coach_id) REFERENCES users(id)`
 - Clave primaria: `PRIMARY KEY (id)`
 - Único: `UNIQUE (coach_id)`
@@ -639,11 +663,14 @@ Análisis de un video hechos por el servicio de IA.
 | `proximity_network` | text | sí |  | JSON de la red de cercanía (grafo + BFS). |
 | `team_a_color` | varchar(7) | sí |  | Color de camiseta del Equipo A según la IA (#rrggbb); vacío en análisis antiguos o de simulación sin color. |
 | `team_b_color` | varchar(7) | sí |  | Color de camiseta del Equipo B según la IA (#rrggbb); vacío en análisis antiguos o de simulación sin color. |
+| `own_kit_color` | varchar(7) | sí |  | Color de camiseta de tu equipo indicado para este análisis (#rrggbb); vacío si no se indicó. |
+| `own_team` | varchar(10) | sí |  | Cuál de los equipos detectados es el tuyo (TEAM_A o TEAM_B); vacío si no se pudo saber. |
 
 **Reglas**
 
 - Regla: `CHECK (((completed_at IS NULL) OR (started_at IS NULL) OR (completed_at >= started_at)))`
 - Regla: `CHECK (((analysis_mode)::text = ANY ((ARRAY['REAL_VIDEO_ANALYSIS'::character varying, 'SIMULATION_MODE'::character varying])::text[])))`
+- Regla: `CHECK ((((own_kit_color IS NULL) OR ((own_kit_color)::text ~ '^#[0-9a-f]{6}$'::text)) AND ((own_team IS NULL) OR ((own_team)::text = ANY ((ARRAY['TEAM_A'::character varying, 'TEAM_B'::character varying])::text[])))))`
 - Regla: `CHECK (((status)::text = ANY ((ARRAY['PENDING'::character varying, 'PROCESSING'::character varying, 'COMPLETED'::character varying, 'FAILED'::character varying, 'CANCELLED'::character varying])::text[])))`
 - Regla: `CHECK ((((team_a_color IS NULL) OR ((team_a_color)::text ~ '^#[0-9a-f]{6}$'::text)) AND ((team_b_color IS NULL) OR ((team_b_color)::text ~ '^#[0-9a-f]{6}$'::text))))`
 - Clave foránea → `videos`: `FOREIGN KEY (video_id) REFERENCES videos(id) ON DELETE CASCADE`
