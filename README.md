@@ -56,6 +56,7 @@ una sola vez, en orden, y queda registrada en la tabla `schema_migrations`.
 | `0012_analysis_team_colors.sql` | Color de camiseta de cada equipo en el análisis y advertencias sin límite de 255 caracteres |
 | `0013_recommendation_explanation.sql` | Explicación de cada posible problema en lenguaje de fútbol y un cuadro real que lo muestra (JSON) |
 | `0014_notification_delete.sql` | Eliminar notificaciones de la propia campana (`hidden_at`): el resto del equipo las sigue viendo |
+| `0015_team_crest_and_kit.sql` | Escudo del equipo (`team_crests`), color habitual de la camiseta y cuál equipo detectado es el tuyo en cada análisis |
 
 Base nueva: primero `sql/schema.sql` y luego las migraciones.
 
