@@ -57,6 +57,7 @@ una sola vez, en orden, y queda registrada en la tabla `schema_migrations`.
 | `0013_recommendation_explanation.sql` | Explicación de cada posible problema en lenguaje de fútbol y un cuadro real que lo muestra (JSON) |
 | `0014_notification_delete.sql` | Eliminar notificaciones de la propia campana (`hidden_at`): el resto del equipo las sigue viendo |
 | `0015_team_crest_and_kit.sql` | Escudo del equipo (`team_crests`), color habitual de la camiseta y cuál equipo detectado es el tuyo en cada análisis |
+| `0016_player_availability.sql` | Disponibilidad del jugador: estado "no disponible" (motivo personal u otro), motivo de la ausencia, fecha estimada de regreso y aviso en la campana ese día |
 
 Base nueva: primero `sql/schema.sql` y luego las migraciones.
 
