@@ -3,7 +3,7 @@
 > Generado con `scripts/data_dictionary.py` a partir de la base de datos (esquema + migraciones).
 > No se edita a mano: si cambia el esquema, se vuelve a generar.
 
-22 tablas y 4 vistas.
+23 tablas y 4 vistas.
 
 ## Diagrama entidad-relación
 
@@ -14,6 +14,10 @@ erDiagram
         varchar match_id FK
         varchar severity
         varchar status
+    }
+    analysis_strengths {
+        varchar id PK
+        varchar analysis_id FK
     }
     audit_log {
         bigint id PK
@@ -118,6 +122,7 @@ erDiagram
         varchar status
     }
     matches ||--o{ ai_recommendations : "match_id"
+    video_analyses ||--o{ analysis_strengths : "analysis_id"
     players |o--o{ detections : "player_id"
     video_analyses ||--o{ detections : "video_analysis_id"
     matches ||--o{ match_events : "match_id"
@@ -183,6 +188,35 @@ Posibles problemas tácticos y recomendaciones de la IA.
 
 - `idx_recommendations_match`: `btree (match_id)`
 - `idx_recommendations_match_status`: `btree (match_id, status)`
+
+### `analysis_strengths`
+
+Lo que el equipo hizo bien en cada análisis (fortalezas), con su evidencia y explicación.
+
+| Columna | Tipo | Nulo | Por defecto | Descripción |
+|---|---|---|---|---|
+| `id` | varchar(36) | no |  | Identificador de la fortaleza. |
+| `analysis_id` | varchar(36) | no |  | Análisis al que pertenece; se borra con él. |
+| `team` | varchar(10) | no |  | TEAM_A, TEAM_B o MATCH (métrica del partido). |
+| `code` | varchar(50) | no |  | Regla que la encontró (LINES_TOGETHER, NOBODY_ISOLATED, PRESSURE_ON_BALL, ATTACKING_DEPTH). |
+| `title` | varchar(255) | no |  | Título en español, por ejemplo «Líneas juntas al defender». |
+| `evidence` | text | no |  | Los números que la sostienen (porcentaje de cuadros del lado bueno y promedio). |
+| `confidence` | numeric(10,4) | no |  | Confianza de 0 a 1 (constancia, muestra, detección, separación de equipos y fiabilidad de la regla). |
+| `indicator` | varchar(100) | sí |  | Indicador del que sale, por ejemplo team_a.defensive_midfield_distance. |
+| `explanation` | text | sí |  | JSON: qué se vio, qué significa, cómo mantenerlo y un cuadro de ejemplo para dibujar en la cancha. |
+| `created_at` | timestamp | no | CURRENT_TIMESTAMP | Cuándo se guardó. |
+
+**Reglas**
+
+- Regla: `CHECK (((confidence >= (0)::numeric) AND (confidence <= (1)::numeric)))`
+- Regla: `CHECK (((explanation IS NULL) OR ((explanation)::jsonb ? 'seen'::text)))`
+- Regla: `CHECK (((team)::text = ANY ((ARRAY['TEAM_A'::character varying, 'TEAM_B'::character varying, 'MATCH'::character varying])::text[])))`
+- Clave foránea → `video_analyses`: `FOREIGN KEY (analysis_id) REFERENCES video_analyses(id) ON DELETE CASCADE`
+- Clave primaria: `PRIMARY KEY (id)`
+
+**Índices**
+
+- `idx_analysis_strengths_analysis`: `btree (analysis_id)`
 
 ### `audit_log`
 
