@@ -3,7 +3,7 @@
 > Generado con `scripts/data_dictionary.py` a partir de la base de datos (esquema + migraciones).
 > No se edita a mano: si cambia el esquema, se vuelve a generar.
 
-23 tablas y 4 vistas.
+24 tablas y 4 vistas.
 
 ## Diagrama entidad-relación
 
@@ -18,6 +18,7 @@ erDiagram
     analysis_strengths {
         varchar id PK
         varchar analysis_id FK
+        varchar status
     }
     audit_log {
         bigint id PK
@@ -75,6 +76,11 @@ erDiagram
         varchar id PK
         varchar recommendation_id FK
         varchar indicator_id FK
+    }
+    recommendation_notes {
+        varchar id PK
+        varchar recommendation_id FK
+        varchar author_id FK
     }
     reports {
         varchar id PK
@@ -141,6 +147,8 @@ erDiagram
     teams |o--o{ players : "team_id"
     tactical_indicators ||--o{ recommendation_indicators : "indicator_id"
     ai_recommendations ||--o{ recommendation_indicators : "recommendation_id"
+    users |o--o{ recommendation_notes : "author_id"
+    ai_recommendations ||--o{ recommendation_notes : "recommendation_id"
     users |o--o{ reports : "generated_by"
     teams ||--o{ reports : "team_id"
     video_analyses ||--o{ tactical_indicators : "video_analysis_id"
@@ -205,11 +213,13 @@ Lo que el equipo hizo bien en cada análisis (fortalezas), con su evidencia y ex
 | `indicator` | varchar(100) | sí |  | Indicador del que sale, por ejemplo team_a.defensive_midfield_distance. |
 | `explanation` | text | sí |  | JSON: qué se vio, qué significa, cómo mantenerlo y un cuadro de ejemplo para dibujar en la cancha. |
 | `created_at` | timestamp | no | CURRENT_TIMESTAMP | Cuándo se guardó. |
+| `status` | varchar(20) | no | 'GENERATED' | GENERATED (sin revisar), CONFIRMED o DISMISSED: el plan de partido solo usa las confirmadas. |
 
 **Reglas**
 
 - Regla: `CHECK (((confidence >= (0)::numeric) AND (confidence <= (1)::numeric)))`
 - Regla: `CHECK (((explanation IS NULL) OR ((explanation)::jsonb ? 'seen'::text)))`
+- Regla: `CHECK (((status)::text = ANY ((ARRAY['GENERATED'::character varying, 'CONFIRMED'::character varying, 'DISMISSED'::character varying])::text[])))`
 - Regla: `CHECK (((team)::text = ANY ((ARRAY['TEAM_A'::character varying, 'TEAM_B'::character varying, 'MATCH'::character varying])::text[])))`
 - Clave foránea → `video_analyses`: `FOREIGN KEY (analysis_id) REFERENCES video_analyses(id) ON DELETE CASCADE`
 - Clave primaria: `PRIMARY KEY (id)`
@@ -424,7 +434,7 @@ Notificaciones de cada equipo (la campana).
 
 **Reglas**
 
-- Regla: `CHECK (((event)::text = ANY ((ARRAY['ANALYSIS_COMPLETED'::character varying, 'ANALYSIS_FAILED'::character varying, 'ANALYSIS_CANCELLED'::character varying, 'TACTICAL_ALERT'::character varying, 'ANALYST_JOINED'::character varying, 'PLAYER_RETURN_DUE'::character varying])::text[])))`
+- Regla: `CHECK (((event)::text = ANY ((ARRAY['ANALYSIS_COMPLETED'::character varying, 'ANALYSIS_FAILED'::character varying, 'ANALYSIS_CANCELLED'::character varying, 'TACTICAL_ALERT'::character varying, 'ANALYST_JOINED'::character varying, 'PLAYER_RETURN_DUE'::character varying, 'RECOMMENDATION_NOTE'::character varying])::text[])))`
 - Clave foránea → `video_analyses`: `FOREIGN KEY (analysis_id) REFERENCES video_analyses(id) ON DELETE SET NULL`
 - Clave foránea → `matches`: `FOREIGN KEY (match_id) REFERENCES matches(id) ON DELETE SET NULL`
 - Clave foránea → `teams`: `FOREIGN KEY (team_id) REFERENCES teams(id) ON DELETE CASCADE`
@@ -512,6 +522,30 @@ Indicadores que sustentan cada recomendación.
 **Índices**
 
 - `idx_recommendation_indicators_indicator`: `btree (indicator_id)`
+
+### `recommendation_notes`
+
+Notas del cuerpo técnico sobre un posible problema: lo que una persona interpreta, firmado.
+
+| Columna | Tipo | Nulo | Por defecto | Descripción |
+|---|---|---|---|---|
+| `id` | varchar(36) | no |  | Identificador de la nota. |
+| `recommendation_id` | varchar(36) | no |  | Posible problema al que se refiere; se borra con él. |
+| `author_id` | varchar(36) | sí |  | Quién la escribió (analista o entrenador); queda vacío si el usuario se elimina. |
+| `text` | varchar(1000) | no |  | La nota (de 1 a 1000 caracteres). |
+| `created_at` | timestamp | no | CURRENT_TIMESTAMP | Cuándo se escribió. |
+| `updated_at` | timestamp | no | CURRENT_TIMESTAMP | Cuándo se editó por última vez. |
+
+**Reglas**
+
+- Regla: `CHECK (((length(btrim((text)::text)) >= 1) AND (length(btrim((text)::text)) <= 1000)))`
+- Clave foránea → `users`: `FOREIGN KEY (author_id) REFERENCES users(id) ON DELETE SET NULL`
+- Clave foránea → `ai_recommendations`: `FOREIGN KEY (recommendation_id) REFERENCES ai_recommendations(id) ON DELETE CASCADE`
+- Clave primaria: `PRIMARY KEY (id)`
+
+**Índices**
+
+- `idx_recommendation_notes_recommendation`: `btree (recommendation_id, created_at)`
 
 ### `reports`
 
