@@ -819,4 +819,15 @@ INSERT INTO analysis_strengths (id, analysis_id, team, code, title, evidence, co
      $json${"seen":"Cuando el rival tenía el balón (cerca de 1 segundo de juego), en el Equipo A hubo al menos un jugador encima del rival que llevaba el balón en el 100 % de esos momentos.","meaning":"El rival casi nunca pudo jugar tranquilo: siempre hubo alguien apurando al que tenía el balón, sin tiempo para levantar la cabeza y elegir el pase.","keep":"Mantener la reacción del jugador más cercano y que los compañeros acompañen para tapar los pases cortos.","example":{"frame_number":7,"timestamp_seconds":0.28,"aspect_ratio":0.5625,"team":"TEAM_A","value":2.0,"players":[{"id":1,"team":"TEAM_A","x":0.1343,"y":0.1838},{"id":2,"team":"TEAM_A","x":0.1308,"y":0.3973},{"id":3,"team":"TEAM_A","x":0.1454,"y":0.605},{"id":4,"team":"TEAM_A","x":0.1334,"y":0.8229},{"id":5,"team":"TEAM_A","x":0.4279,"y":0.1942},{"id":6,"team":"TEAM_A","x":0.4153,"y":0.4235},{"id":7,"team":"TEAM_A","x":0.4431,"y":0.6138},{"id":8,"team":"TEAM_A","x":0.4402,"y":0.8017},{"id":9,"team":"TEAM_A","x":0.5957,"y":0.3962},{"id":10,"team":"TEAM_A","x":0.5915,"y":0.6008},{"id":101,"team":"TEAM_B","x":0.8486,"y":0.2583},{"id":102,"team":"TEAM_B","x":0.8329,"y":0.4113},{"id":103,"team":"TEAM_B","x":0.8271,"y":0.604},{"id":104,"team":"TEAM_B","x":0.8386,"y":0.751},{"id":105,"team":"TEAM_B","x":0.71,"y":0.3334},{"id":106,"team":"TEAM_B","x":0.7128,"y":0.5131},{"id":107,"team":"TEAM_B","x":0.7096,"y":0.6466},{"id":108,"team":"TEAM_B","x":0.6113,"y":0.3016},{"id":109,"team":"TEAM_B","x":0.5976,"y":0.4965},{"id":110,"team":"TEAM_B","x":0.605,"y":0.7133}],"ball":[0.5405,0.5],"owner":"TEAM_B","overlay":{"kind":"pressure","radius":0.1,"pressing":[9,10]}}}$json$, '2026-09-20 20:06')
 ON CONFLICT (id) DO NOTHING;
 
+-- The coaching staff's review of the last analysis (migration 0018): two problems confirmed with the
+-- analyst's reading, and the pressure on the ball confirmed as a strength. The match plan of the next
+-- match (Itagüí FC) shows only these confirmed items.
+UPDATE ai_recommendations SET status = 'CONFIRMED' WHERE id IN ('demo-rec-1', 'demo-rec-3') AND status <> 'CONFIRMED';
+INSERT INTO recommendation_notes (id, recommendation_id, author_id, text, created_at, updated_at) VALUES
+    ('demo-note-1', 'demo-rec-1', 'demo-user-analyst', 'Pasa sobre todo después de perder el balón en campo rival: el 5 sube a presionar y nadie cubre su espacio. En el segundo gol de Rionegro se ve claro.', '2026-10-12 09:15', '2026-10-12 09:15'),
+    ('demo-note-2', 'demo-rec-3', 'demo-user-analyst', 'El bloque se abre cuando los extremos no bajan. Con el 7 y el 11 cerrando por dentro el equipo queda mucho más junto.', '2026-10-12 09:20', '2026-10-12 09:20'),
+    ('demo-note-3', 'demo-rec-1', 'demo-user-coach', 'De acuerdo. Lo trabajamos el martes: el 5 no salta si no hay cobertura del 8.', '2026-10-12 11:02', '2026-10-12 11:02')
+ON CONFLICT (id) DO NOTHING;
+UPDATE analysis_strengths SET status = 'CONFIRMED' WHERE id = 'demo-strength-5-3' AND status = 'GENERATED';
+
 COMMIT;
