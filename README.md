@@ -59,6 +59,7 @@ una sola vez, en orden, y queda registrada en la tabla `schema_migrations`.
 | `0015_team_crest_and_kit.sql` | Escudo del equipo (`team_crests`), color habitual de la camiseta y cuál equipo detectado es el tuyo en cada análisis |
 | `0016_player_availability.sql` | Disponibilidad del jugador: estado "no disponible" (motivo personal u otro), motivo de la ausencia, fecha estimada de regreso y aviso en la campana ese día |
 | `0017_analysis_strengths.sql` | Lo que el equipo hizo bien en cada análisis (fortalezas): título, evidencia, confianza y explicación en lenguaje de fútbol, con RLS por análisis |
+| `0018_review_notes_and_strengths.sql` | Notas del cuerpo técnico sobre cada posible problema (`recommendation_notes`, con RLS y aviso en la campana) y revisión de las fortalezas (`analysis_strengths.status`): el plan de partido solo usa lo confirmado |
 
 Base nueva: primero `sql/schema.sql` y luego las migraciones.
 
