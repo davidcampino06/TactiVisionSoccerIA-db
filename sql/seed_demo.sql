@@ -824,9 +824,9 @@ ON CONFLICT (id) DO NOTHING;
 -- match (Itagüí FC) shows only these confirmed items.
 UPDATE ai_recommendations SET status = 'CONFIRMED' WHERE id IN ('demo-rec-1', 'demo-rec-3') AND status <> 'CONFIRMED';
 INSERT INTO recommendation_notes (id, recommendation_id, author_id, text, created_at, updated_at) VALUES
-    ('demo-note-1', 'demo-rec-1', 'demo-user-analyst', 'Pasa sobre todo después de perder el balón en campo rival: el 5 sube a presionar y nadie cubre su espacio. En el segundo gol de Rionegro se ve claro.', '2026-10-12 09:15', '2026-10-12 09:15'),
-    ('demo-note-2', 'demo-rec-3', 'demo-user-analyst', 'El bloque se abre cuando los extremos no bajan. Con el 7 y el 11 cerrando por dentro el equipo queda mucho más junto.', '2026-10-12 09:20', '2026-10-12 09:20'),
-    ('demo-note-3', 'demo-rec-1', 'demo-user-coach', 'De acuerdo. Lo trabajamos el martes: el 5 no salta si no hay cobertura del 8.', '2026-10-12 11:02', '2026-10-12 11:02')
+    ('demo-note-1', 'demo-rec-1', 'demo-user-analyst', 'Pasa sobre todo después de perder el balón en campo rival: el 5 sube a presionar y nadie cubre su espacio. En el segundo gol de Rionegro se ve claro.', '2026-10-12 14:15', '2026-10-12 14:15'),
+    ('demo-note-2', 'demo-rec-3', 'demo-user-analyst', 'El bloque se abre cuando los extremos no bajan. Con el 7 y el 11 cerrando por dentro el equipo queda mucho más junto.', '2026-10-12 14:20', '2026-10-12 14:20'),
+    ('demo-note-3', 'demo-rec-1', 'demo-user-coach', 'De acuerdo. Lo trabajamos el martes: el 5 no salta si no hay cobertura del 8.', '2026-10-12 16:02', '2026-10-12 16:02')
 ON CONFLICT (id) DO NOTHING;
 UPDATE analysis_strengths SET status = 'CONFIRMED' WHERE id = 'demo-strength-5-3' AND status = 'GENERATED';
 
