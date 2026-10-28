@@ -60,6 +60,7 @@ una sola vez, en orden, y queda registrada en la tabla `schema_migrations`.
 | `0016_player_availability.sql` | Disponibilidad del jugador: estado "no disponible" (motivo personal u otro), motivo de la ausencia, fecha estimada de regreso y aviso en la campana ese día |
 | `0017_analysis_strengths.sql` | Lo que el equipo hizo bien en cada análisis (fortalezas): título, evidencia, confianza y explicación en lenguaje de fútbol, con RLS por análisis |
 | `0018_review_notes_and_strengths.sql` | Notas del cuerpo técnico sobre cada posible problema (`recommendation_notes`, con RLS y aviso en la campana) y revisión de las fortalezas (`analysis_strengths.status`): el plan de partido solo usa lo confirmado |
+| `0019_indicator_samples.sql` | Cuántos cuadros pudo juzgar cada indicador (`samples`) y qué proporción quedó del lado malo del umbral (`exceed_ratio`): el seguimiento de un problema confirmado distingue "no apareció" de "no se pudo juzgar" |
 
 Base nueva: primero `sql/schema.sql` y luego las migraciones.
 
