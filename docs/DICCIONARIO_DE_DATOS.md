@@ -588,9 +588,13 @@ Indicadores tácticos de cada análisis.
 | `unit` | varchar(50) | no |  | Unidad (proporción de imagen, jugadores, pases...). |
 | `calculated_at` | timestamp | no | CURRENT_TIMESTAMP | Fecha del cálculo. |
 | `threshold` | numeric(10,4) | sí |  | Umbral de referencia (NULL si no tiene). |
+| `samples` | integer | sí |  | Cuadros en que se midió (solo los de su fase de juego, si tiene). NULL en análisis anteriores a 0019. |
+| `exceed_ratio` | numeric(5,4) | sí |  | Proporción de esos cuadros del lado malo del umbral (0..1). NULL en análisis anteriores a 0019. |
 
 **Reglas**
 
+- Regla: `CHECK (((exceed_ratio IS NULL) OR ((exceed_ratio >= (0)::numeric) AND (exceed_ratio <= (1)::numeric))))`
+- Regla: `CHECK (((samples IS NULL) OR (samples >= 0)))`
 - Clave foránea → `video_analyses`: `FOREIGN KEY (video_analysis_id) REFERENCES video_analyses(id) ON DELETE CASCADE`
 - Clave primaria: `PRIMARY KEY (id)`
 
