@@ -61,6 +61,7 @@ una sola vez, en orden, y queda registrada en la tabla `schema_migrations`.
 | `0017_analysis_strengths.sql` | Lo que el equipo hizo bien en cada análisis (fortalezas): título, evidencia, confianza y explicación en lenguaje de fútbol, con RLS por análisis |
 | `0018_review_notes_and_strengths.sql` | Notas del cuerpo técnico sobre cada posible problema (`recommendation_notes`, con RLS y aviso en la campana) y revisión de las fortalezas (`analysis_strengths.status`): el plan de partido solo usa lo confirmado |
 | `0019_indicator_samples.sql` | Cuántos cuadros pudo juzgar cada indicador (`samples`) y qué proporción quedó del lado malo del umbral (`exceed_ratio`): el seguimiento de un problema confirmado distingue "no apareció" de "no se pudo juzgar" |
+| `0020_video_situation.sql` | Situación táctica de cada clip, elegida por una persona (`videos.situation`: salida de balón, ataque organizado, transiciones, presión alta, bloque defensivo, balón parado) y una nota corta: la biblioteca de clips los filtra por situación |
 
 Base nueva: primero `sql/schema.sql` y luego las migraciones.
 
