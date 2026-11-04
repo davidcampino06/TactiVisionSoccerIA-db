@@ -773,10 +773,14 @@ Videos subidos a un partido.
 | `duration_seconds` | integer | sí |  | Duración opcional. |
 | `uploaded_at` | timestamp | no | CURRENT_TIMESTAMP | Fecha de subida. |
 | `status` | varchar(50) | no | 'UPLOADED' | UPLOADED, ANALYZING o ANALYZED. |
+| `situation` | varchar(30) | sí |  | Situación táctica que muestra el clip, elegida por una persona (BUILD_UP, POSITIONAL_ATTACK, COUNTER_ATTACK, DEFENSIVE_TRANSITION, PRESSING, DEFENSIVE_BLOCK, SET_PIECE). NULL: sin clasificar. |
+| `situation_note` | varchar(200) | sí |  | Nota corta del cuerpo técnico sobre el clip (opcional). |
 
 **Reglas**
 
 - Regla: `CHECK ((file_size > 0))`
+- Regla: `CHECK (((situation_note IS NULL) OR ((length(btrim((situation_note)::text)) >= 1) AND (length(btrim((situation_note)::text)) <= 200))))`
+- Regla: `CHECK (((situation IS NULL) OR ((situation)::text = ANY ((ARRAY['BUILD_UP'::character varying, 'POSITIONAL_ATTACK'::character varying, 'COUNTER_ATTACK'::character varying, 'DEFENSIVE_TRANSITION'::character varying, 'PRESSING'::character varying, 'DEFENSIVE_BLOCK'::character varying, 'SET_PIECE'::character varying])::text[]))))`
 - Regla: `CHECK (((status)::text = ANY ((ARRAY['UPLOADED'::character varying, 'ANALYZING'::character varying, 'ANALYZED'::character varying])::text[])))`
 - Clave foránea → `matches`: `FOREIGN KEY (match_id) REFERENCES matches(id) ON DELETE CASCADE`
 - Clave primaria: `PRIMARY KEY (id)`
@@ -784,6 +788,7 @@ Videos subidos a un partido.
 **Índices**
 
 - `idx_videos_match`: `btree (match_id)`
+- `idx_videos_situation`: `btree (situation) WHERE (situation IS NOT NULL)`
 
 ## Vistas
 
