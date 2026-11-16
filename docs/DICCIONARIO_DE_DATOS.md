@@ -319,6 +319,7 @@ Catálogo compartido de formaciones (4-3-3, 4-4-2...).
 
 **Reglas**
 
+- Regla: `CHECK (formation_name_is_valid((name)::text)) NOT VALID` *(NOT VALID: solo filas nuevas)*
 - Regla: `CHECK (((player_count >= 1) AND (player_count <= 11)))`
 - Clave primaria: `PRIMARY KEY (id)`
 - Único: `UNIQUE (name)`
@@ -661,6 +662,7 @@ Jugadas diseñadas en el editor táctico.
 
 **Reglas**
 
+- Regla: `CHECK (((action_type IS NULL) OR (char_length((action_type)::text) <= 40))) NOT VALID` *(NOT VALID: solo filas nuevas)*
 - Regla: `CHECK (((description IS NULL) OR (char_length((description)::text) <= 100))) NOT VALID` *(NOT VALID: solo filas nuevas)*
 - Regla: `CHECK ((char_length((name)::text) <= 50)) NOT VALID` *(NOT VALID: solo filas nuevas)*
 - Clave foránea → `teams`: `FOREIGN KEY (team_id) REFERENCES teams(id) ON DELETE CASCADE`
