@@ -288,11 +288,12 @@ Jugadores y balón detectados en cada cuadro.
 | `bounding_box_y` | numeric(10,4) | no |  | Caja: y. |
 | `bounding_box_width` | numeric(10,4) | no |  | Caja: ancho. |
 | `bounding_box_height` | numeric(10,4) | no |  | Caja: alto. |
-| `player_number` | integer | sí |  | Dorsal si se conoce. |
+| `player_number` | integer | sí |  | Dorsal (0 a 99) que una persona escribió para la trayectoria; lo comparten todas sus detecciones. |
 | `track_id` | integer | sí |  | Pista del seguimiento (mismo jugador entre cuadros). |
 
 **Reglas**
 
+- Regla: `CHECK (((player_number IS NULL) OR ((player_number >= 0) AND (player_number <= 99)))) NOT VALID` *(NOT VALID: solo filas nuevas)*
 - Regla: `CHECK (((confidence >= (0)::numeric) AND (confidence <= (1)::numeric)))`
 - Clave foránea → `players`: `FOREIGN KEY (player_id) REFERENCES players(id) ON DELETE SET NULL`
 - Clave foránea → `video_analyses`: `FOREIGN KEY (video_analysis_id) REFERENCES video_analyses(id) ON DELETE CASCADE`
