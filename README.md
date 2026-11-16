@@ -64,6 +64,7 @@ una sola vez, en orden, y queda registrada en la tabla `schema_migrations`.
 | `0020_video_situation.sql` | Situación táctica de cada clip, elegida por una persona (`videos.situation`: salida de balón, ataque organizado, transiciones, presión alta, bloque defensivo, balón parado) y una nota corta: la biblioteca de clips los filtra por situación |
 | `0021_track_snapshots.sql` | Foto de cada trayectoria detectada (`track_snapshots`: el mejor recorte del video, JPEG pequeño, con RLS por análisis) para que el cuerpo técnico reconozca al jugador y lo vincule a la plantilla; los análisis anteriores no tienen fotos |
 | `0022_team_action_types.sql` | Tipos de acción escritos por el equipo (`team_action_types`, únicos por equipo, con RLS) y límites de las jugadas nuevas: nombre de 50 caracteres y descripción de 100 |
+| `0023_track_labels.sql` | Trayectorias que una persona marca como árbitro u otra persona externa (`track_labels`, con RLS por análisis); quedan fuera de la identificación y del ranking |
 
 Base nueva: primero `sql/schema.sql` y luego las migraciones.
 
