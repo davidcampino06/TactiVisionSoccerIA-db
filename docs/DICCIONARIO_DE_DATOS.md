@@ -216,6 +216,10 @@ Posibles problemas tácticos y recomendaciones de la IA.
 - `idx_recommendations_match`: `btree (match_id)`
 - `idx_recommendations_match_status`: `btree (match_id, status)`
 
+**Seguridad por filas (RLS)**
+
+- `recommendations_via_match` (ALL): `(app_rls_bypass() OR (EXISTS ( SELECT 1    FROM matches m   WHERE ((m.id)::text = (ai_recommendations.match_id)::text))))`
+
 ### `analysis_strengths`
 
 Lo que el equipo hizo bien en cada análisis (fortalezas), con su evidencia y explicación.
@@ -247,6 +251,10 @@ Lo que el equipo hizo bien en cada análisis (fortalezas), con su evidencia y ex
 
 - `idx_analysis_strengths_analysis`: `btree (analysis_id)`
 
+**Seguridad por filas (RLS)**
+
+- `strengths_via_analysis` (ALL): `(app_rls_bypass() OR (EXISTS ( SELECT 1    FROM video_analyses va   WHERE ((va.id)::text = (analysis_strengths.analysis_id)::text))))`
+
 ### `audit_log`
 
 Auditoría: quién cambió qué y cuándo (escrita por triggers).
@@ -270,6 +278,10 @@ Auditoría: quién cambió qué y cuándo (escrita por triggers).
 
 - `idx_audit_log_changed_at`: `btree (changed_at DESC)`
 - `idx_audit_log_row`: `btree (table_name, row_id, changed_at DESC)`
+
+**Seguridad por filas (RLS)**
+
+- Activa sin políticas: nadie ve filas salvo el dueño.
 
 ### `detections`
 
@@ -304,6 +316,10 @@ Jugadores y balón detectados en cada cuadro.
 - `idx_detections_analysis_frame`: `btree (video_analysis_id, frame_number)`
 - `idx_detections_analysis_track`: `btree (video_analysis_id, track_id)`
 - `idx_detections_player`: `btree (player_id) WHERE (player_id IS NOT NULL)`
+
+**Seguridad por filas (RLS)**
+
+- `detections_via_analysis` (ALL): `(app_rls_bypass() OR (EXISTS ( SELECT 1    FROM video_analyses va   WHERE ((va.id)::text = (detections.video_analysis_id)::text))))`
 
 ### `formations`
 
@@ -351,6 +367,10 @@ Eventos registrados durante un partido.
 
 - `idx_match_events_match`: `btree (match_id)`
 
+**Seguridad por filas (RLS)**
+
+- `match_events_via_match` (ALL): `(app_rls_bypass() OR (EXISTS ( SELECT 1    FROM matches m   WHERE ((m.id)::text = (match_events.match_id)::text))))`
+
 ### `match_formations`
 
 Formaciones usadas en un partido.
@@ -368,6 +388,10 @@ Formaciones usadas en un partido.
 - Clave primaria: `PRIMARY KEY (id)`
 - Único: `UNIQUE (match_id, formation_id)`
 
+**Seguridad por filas (RLS)**
+
+- `match_formations_via_match` (ALL): `(app_rls_bypass() OR (EXISTS ( SELECT 1    FROM matches m   WHERE ((m.id)::text = (match_formations.match_id)::text))))`
+
 ### `match_tactical_plays`
 
 Jugadas aplicadas a un partido.
@@ -384,6 +408,10 @@ Jugadas aplicadas a un partido.
 - Clave foránea → `tactical_plays`: `FOREIGN KEY (tactical_play_id) REFERENCES tactical_plays(id) ON DELETE CASCADE`
 - Clave primaria: `PRIMARY KEY (id)`
 - Único: `UNIQUE (match_id, tactical_play_id)`
+
+**Seguridad por filas (RLS)**
+
+- `match_tactical_plays_via_match` (ALL): `(app_rls_bypass() OR (EXISTS ( SELECT 1    FROM matches m   WHERE ((m.id)::text = (match_tactical_plays.match_id)::text))))`
 
 ### `matches`
 
@@ -417,6 +445,10 @@ Partidos de cada equipo.
 - `idx_matches_team_date`: `btree (team_id, match_date)`
 - `idx_matches_team_status_date`: `btree (team_id, status, match_date)`
 
+**Seguridad por filas (RLS)**
+
+- `matches_team_isolation` (ALL): `app_can_see_team(team_id)`
+
 ### `notification_reads`
 
 Qué notificaciones leyó (o eliminó de su campana) cada usuario.
@@ -438,6 +470,10 @@ Qué notificaciones leyó (o eliminó de su campana) cada usuario.
 **Índices**
 
 - `idx_notification_reads_user`: `btree (user_id)`
+
+**Seguridad por filas (RLS)**
+
+- `notification_reads_owner` (ALL): `(app_rls_bypass() OR (((user_id)::text = (app_current_user())::text) AND (EXISTS ( SELECT 1    FROM notifications n   WHERE ((n.id)::text = (notification_reads.notification_id)::text)))))`
 
 ### `notifications`
 
@@ -465,6 +501,10 @@ Notificaciones de cada equipo (la campana).
 
 - `idx_notifications_team_created`: `btree (team_id, created_at DESC)`
 
+**Seguridad por filas (RLS)**
+
+- `notifications_team_isolation` (ALL): `app_can_see_team(team_id)`
+
 ### `player_team_history`
 
 Historial de equipos de cada jugador.
@@ -488,6 +528,10 @@ Historial de equipos de cada jugador.
 **Índices**
 
 - `idx_player_history_player`: `btree (player_id, joined_at)`
+
+**Seguridad por filas (RLS)**
+
+- `player_history_team_isolation` (ALL): `app_can_see_team(team_id)`
 
 ### `players`
 
@@ -523,6 +567,10 @@ Plantilla de cada equipo.
 - `idx_players_team`: `btree (team_id)`
 - `idx_players_team_shirt`: `btree (team_id, shirt_number)`
 
+**Seguridad por filas (RLS)**
+
+- `players_team_isolation` (ALL): `app_can_see_team(team_id)`
+
 ### `recommendation_indicators`
 
 Indicadores que sustentan cada recomendación.
@@ -543,6 +591,10 @@ Indicadores que sustentan cada recomendación.
 **Índices**
 
 - `idx_recommendation_indicators_indicator`: `btree (indicator_id)`
+
+**Seguridad por filas (RLS)**
+
+- `recommendation_links_via_recommendation` (ALL): `(app_rls_bypass() OR (EXISTS ( SELECT 1    FROM ai_recommendations r   WHERE ((r.id)::text = (recommendation_indicators.recommendation_id)::text))))`
 
 ### `recommendation_notes`
 
@@ -567,6 +619,10 @@ Notas del cuerpo técnico sobre un posible problema: lo que una persona interpre
 **Índices**
 
 - `idx_recommendation_notes_recommendation`: `btree (recommendation_id, created_at)`
+
+**Seguridad por filas (RLS)**
+
+- `notes_via_recommendation` (ALL): `(app_rls_bypass() OR (EXISTS ( SELECT 1    FROM ai_recommendations r   WHERE ((r.id)::text = (recommendation_notes.recommendation_id)::text))))`
 
 ### `reports`
 
@@ -596,6 +652,10 @@ Reportes generados (partido, análisis o evolución).
 - `idx_reports_team`: `btree (team_id)`
 - `idx_reports_team_generated`: `btree (team_id, generated_at DESC)`
 
+**Seguridad por filas (RLS)**
+
+- `reports_team_isolation` (ALL): `app_can_see_team(team_id)`
+
 ### `tactical_indicators`
 
 Indicadores tácticos de cada análisis.
@@ -624,6 +684,10 @@ Indicadores tácticos de cada análisis.
 - `idx_indicators_analysis`: `btree (video_analysis_id)`
 - `idx_indicators_analysis_name`: `btree (video_analysis_id, name)`
 
+**Seguridad por filas (RLS)**
+
+- `indicators_via_analysis` (ALL): `(app_rls_bypass() OR (EXISTS ( SELECT 1    FROM video_analyses va   WHERE ((va.id)::text = (tactical_indicators.video_analysis_id)::text))))`
+
 ### `tactical_play_versions`
 
 Versiones de cada jugada (patrón Prototype + pila de versiones).
@@ -645,6 +709,10 @@ Versiones de cada jugada (patrón Prototype + pila de versiones).
 - Clave foránea → `tactical_plays`: `FOREIGN KEY (tactical_play_id) REFERENCES tactical_plays(id) ON DELETE CASCADE`
 - Clave primaria: `PRIMARY KEY (id)`
 - Único: `UNIQUE (tactical_play_id, version_number)`
+
+**Seguridad por filas (RLS)**
+
+- `play_versions_via_play` (ALL): `(app_rls_bypass() OR (EXISTS ( SELECT 1    FROM tactical_plays tp   WHERE ((tp.id)::text = (tactical_play_versions.tactical_play_id)::text))))`
 
 ### `tactical_plays`
 
@@ -668,6 +736,10 @@ Jugadas diseñadas en el editor táctico.
 - Clave foránea → `teams`: `FOREIGN KEY (team_id) REFERENCES teams(id) ON DELETE CASCADE`
 - Clave primaria: `PRIMARY KEY (id)`
 
+**Seguridad por filas (RLS)**
+
+- `tactical_plays_team_isolation` (ALL): `app_can_see_team(team_id)`
+
 ### `team_action_types`
 
 Tipos de acción escritos por el equipo para sus jugadas, además de los fijos del editor.
@@ -687,6 +759,10 @@ Tipos de acción escritos por el equipo para sus jugadas, además de los fijos d
 - Clave foránea → `teams`: `FOREIGN KEY (team_id) REFERENCES teams(id) ON DELETE CASCADE`
 - Clave primaria: `PRIMARY KEY (id)`
 
+**Seguridad por filas (RLS)**
+
+- `team_action_types_team_isolation` (ALL): `app_can_see_team(team_id)`
+
 ### `team_crests`
 
 Escudo del equipo: una imagen PNG de 256 px por equipo, re-codificada por el backend.
@@ -704,6 +780,10 @@ Escudo del equipo: una imagen PNG de 256 px por equipo, re-codificada por el bac
 - Regla: `CHECK (((octet_length(image) >= 1) AND (octet_length(image) <= 300000)))`
 - Clave foránea → `teams`: `FOREIGN KEY (team_id) REFERENCES teams(id) ON DELETE CASCADE`
 - Clave primaria: `PRIMARY KEY (team_id)`
+
+**Seguridad por filas (RLS)**
+
+- `team_crests_team_isolation` (ALL): `app_can_see_team(team_id)`
 
 ### `teams`
 
@@ -730,6 +810,11 @@ Equipos; cada entrenador tiene uno.
 - Único: `UNIQUE (coach_id)`
 - Único: `UNIQUE (invitation_code)`
 
+**Seguridad por filas (RLS)**
+
+- `teams_admin_read` (SELECT): `((app_current_role())::text = 'ADMINISTRATOR'::text)`
+- `teams_member_access` (ALL): `(app_can_see_team(id) OR ((coach_id)::text = (app_current_user())::text))`
+
 ### `track_labels`
 
 Trayectorias que una persona marcó como árbitro o persona externa (no son jugadores).
@@ -748,6 +833,10 @@ Trayectorias que una persona marcó como árbitro o persona externa (no son juga
 - Clave foránea → `video_analyses`: `FOREIGN KEY (analysis_id) REFERENCES video_analyses(id) ON DELETE CASCADE`
 - Clave foránea → `users`: `FOREIGN KEY (labelled_by) REFERENCES users(id) ON DELETE SET NULL`
 - Clave primaria: `PRIMARY KEY (analysis_id, track_id)`
+
+**Seguridad por filas (RLS)**
+
+- `track_labels_via_analysis` (ALL): `(app_rls_bypass() OR (EXISTS ( SELECT 1    FROM video_analyses va   WHERE ((va.id)::text = (track_labels.analysis_id)::text))))`
 
 ### `track_snapshots`
 
@@ -775,6 +864,10 @@ Foto de cada trayectoria detectada (el mejor recorte del video) para que el cuer
 - Regla: `CHECK ((width > 0))`
 - Clave foránea → `video_analyses`: `FOREIGN KEY (analysis_id) REFERENCES video_analyses(id) ON DELETE CASCADE`
 - Clave primaria: `PRIMARY KEY (analysis_id, track_id)`
+
+**Seguridad por filas (RLS)**
+
+- `track_snapshots_via_analysis` (ALL): `(app_rls_bypass() OR (EXISTS ( SELECT 1    FROM video_analyses va   WHERE ((va.id)::text = (track_snapshots.analysis_id)::text))))`
 
 ### `users`
 
@@ -847,6 +940,10 @@ Análisis de un video hechos por el servicio de IA.
 - `idx_analyses_active`: `btree (status) WHERE ((status)::text = ANY ((ARRAY['PENDING'::character varying, 'PROCESSING'::character varying])::text[]))`
 - `idx_video_analyses_video`: `btree (video_id)`
 
+**Seguridad por filas (RLS)**
+
+- `analyses_via_video` (ALL): `(app_rls_bypass() OR (EXISTS ( SELECT 1    FROM videos v   WHERE ((v.id)::text = (video_analyses.video_id)::text))))`
+
 ### `videos`
 
 Videos subidos a un partido.
@@ -879,6 +976,10 @@ Videos subidos a un partido.
 - `idx_videos_match`: `btree (match_id)`
 - `idx_videos_situation`: `btree (situation) WHERE (situation IS NOT NULL)`
 
+**Seguridad por filas (RLS)**
+
+- `videos_via_match` (ALL): `(app_rls_bypass() OR (EXISTS ( SELECT 1    FROM matches m   WHERE ((m.id)::text = (videos.match_id)::text))))`
+
 ## Vistas
 
 | Vista | Qué muestra |
@@ -889,3 +990,17 @@ Videos subidos a un partido.
 | `v_match_summary` | Resumen por partido: marcador, videos, análisis y problemas abiertos. |
 | `v_open_issues` | Posibles problemas abiertos, el más urgente primero. |
 | `v_player_participation` | Participación de cada jugador en los videos analizados. |
+
+## Funciones
+
+Funciones propias de la base (las de extensiones no se listan).
+
+| Función | Devuelve | Volatilidad | Qué hace |
+|---|---|---|---|
+| `app_can_see_team(target_team_id character varying)` | boolean | STABLE | Regla central de RLS: verdadero si la fila es del equipo de la sesión o si la sesión es del sistema. |
+| `app_current_role()` | character varying | STABLE | Rol del usuario de la sesión (app.current_role): COACH, ANALYST o ADMINISTRATOR. |
+| `app_current_team()` | character varying | STABLE | Equipo del usuario de la sesión (app.current_team_id); las políticas RLS comparan cada fila con él. |
+| `app_current_user()` | character varying | STABLE | Usuario de la sesión (app.current_user_id), que el backend fija en cada petición; NULL si no hay. |
+| `app_rls_bypass()` | boolean | STABLE | Verdadero cuando la sesión pidió saltarse RLS (app.bypass_rls = on): solo tareas del sistema, como un análisis en segundo plano. |
+| `audit_row_change()` | trigger | VOLATILE | Disparador de auditoría: guarda en audit_log quién cambió qué (solo columnas que cambiaron), sin copiar nunca el hash de la contraseña. |
+| `formation_name_is_valid(formation_name text)` | boolean | IMMUTABLE | Verdadero si el nombre no es un sistema numérico, o si lo es con 2 a 5 líneas de 1 a 6 jugadores que suman 10. |
