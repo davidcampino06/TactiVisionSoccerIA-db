@@ -102,6 +102,36 @@ HAVING count(DISTINCT player_id) > 1 OR count(DISTINCT player_number) > 1
     OR count(player_id) NOT IN (0, count(*)) OR count(player_number) NOT IN (0, count(*))
 ORDER BY 1, 2;
 
+-- 8c. Suggested links between cut tracks (migration 0029).
+--     Accepted links whose two tracks were given different players or shirt numbers: a person said
+--     they are one player, so one of the two identifications is wrong.
+WITH track_identity AS (
+    SELECT video_analysis_id AS analysis_id, track_id, max(player_id) AS player_id, max(player_number) AS player_number
+    FROM detections
+    WHERE track_id IS NOT NULL
+    GROUP BY 1, 2
+)
+SELECT l.analysis_id AS analisis, l.from_track AS de, l.to_track AS a,
+       f.player_id AS jugador_de, t.player_id AS jugador_a, f.player_number AS dorsal_de, t.player_number AS dorsal_a
+FROM track_links l
+JOIN track_identity f ON f.analysis_id = l.analysis_id AND f.track_id = l.from_track
+JOIN track_identity t ON t.analysis_id = l.analysis_id AND t.track_id = l.to_track
+WHERE l.status = 'ACCEPTED'
+  AND (f.player_id <> t.player_id OR f.player_number <> t.player_number)
+ORDER BY 1, 2;
+
+--     Links whose frames no longer match the detections of their tracks (for example a track that
+--     has no detections any more): they describe something that is not in the data.
+SELECT l.analysis_id AS analisis, l.from_track AS de, l.to_track AS a, l.from_last_frame, f.last_frame,
+       l.to_first_frame, t.first_frame
+FROM track_links l
+LEFT JOIN LATERAL (SELECT max(frame_number) AS last_frame FROM detections d
+                   WHERE d.video_analysis_id = l.analysis_id AND d.track_id = l.from_track) f ON true
+LEFT JOIN LATERAL (SELECT min(frame_number) AS first_frame FROM detections d
+                   WHERE d.video_analysis_id = l.analysis_id AND d.track_id = l.to_track) t ON true
+WHERE f.last_frame IS DISTINCT FROM l.from_last_frame OR t.first_frame IS DISTINCT FROM l.to_first_frame
+ORDER BY 1, 2;
+
 -- 9. Size of each team: the general picture (not an error list).
 SELECT t.name AS equipo,
        (SELECT count(*) FROM players p WHERE p.team_id = t.id) AS jugadores,
