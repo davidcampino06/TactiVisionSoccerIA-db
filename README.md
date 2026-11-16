@@ -70,6 +70,10 @@ una sola vez, en orden, y queda registrada en la tabla `schema_migrations`.
 | `0026_identification_views.sql` | Vistas de reporte `v_identification_progress` (por clip: trayectorias, con foto, con jugador, solo dorsal, árbitros, externos, pendientes) y `v_action_type_usage` (tipos de acción y cuántas jugadas los usan), con `security_invoker` para que RLS siga aplicando |
 | `0027_migration_checksums.sql` | Columna `schema_migrations.checksum`: `scripts/apply_migrations.py` guarda el SHA-256 de cada migración aplicada y se detiene si una ya aplicada fue editada (el fin de línea de Windows no cuenta como cambio) |
 | `0028_function_comments.sql` | Descripción de las funciones de RLS y de auditoría, que el diccionario de datos ahora lista junto con las políticas RLS de cada tabla |
+| `0029_track_links.sql` | Pares de trayectorias que la IA cree que son el mismo jugador cortado por una oclusión (`track_links`): sus razones (segundos sin verse, distancia, color, equipo), uno a uno, y la decisión de una persona (`SUGGESTED`, `ACCEPTED`, `REJECTED`) con quién y cuándo; RLS por análisis |
+| `0030_track_role_suggestions.sql` | Trayectorias con camiseta de ningún equipo agrupadas por color (`track_role_suggestions`): posible árbitro o arquero, con el motivo en palabras; una persona puede descartarlas; RLS por análisis |
+| `0031_audit_track_decisions.sql` | La auditoría nombra la fila por sus columnas clave (`análisis/trayectoria`, `row_id` de 80 caracteres) y registra las marcas de árbitro, las decisiones sobre enlaces y las sugerencias descartadas |
+| `0032_track_identity_views.sql` | Vistas `v_track_identities` (cada trayectoria de una cadena de enlaces aceptados con la primera de su cadena: el mismo jugador) y `v_track_link_review` (por clip: enlaces por decidir, aceptados, rechazados y sugerencias abiertas), con `security_invoker` |
 
 Base nueva: primero `sql/schema.sql` y luego las migraciones.
 
