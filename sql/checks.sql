@@ -345,4 +345,37 @@ BEGIN
     RAISE NOTICE 'OK track links (% bad rows rejected, one-to-one, decision with its date)', rejected;
 END $$;
 
+-- 10. Referee and goalkeeper suggestions grouped by kit (migration 0030).
+DO $$
+DECLARE
+    bad_rows text[] := ARRAY[
+        $q$INSERT INTO track_role_suggestions (analysis_id, track_id, suggestion, kit_group, kit_color, kit_tracks, confidence, reason) VALUES ('chk-analysis-b', 7, 'COACH', 1, '#3bb3c2', 1, 0.5, 'x')$q$,
+        $q$INSERT INTO track_role_suggestions (analysis_id, track_id, suggestion, kit_group, kit_color, kit_tracks, confidence, reason) VALUES ('chk-analysis-b', 7, 'REFEREE', 0, '#3bb3c2', 1, 0.5, 'x')$q$,
+        $q$INSERT INTO track_role_suggestions (analysis_id, track_id, suggestion, kit_group, kit_color, kit_tracks, confidence, reason) VALUES ('chk-analysis-b', 7, 'REFEREE', 1, 'cyan', 1, 0.5, 'x')$q$,
+        $q$INSERT INTO track_role_suggestions (analysis_id, track_id, suggestion, kit_group, kit_color, kit_tracks, confidence, reason) VALUES ('chk-analysis-b', 7, 'REFEREE', 1, '#3BB3C2', 1, 0.5, 'x')$q$,
+        $q$INSERT INTO track_role_suggestions (analysis_id, track_id, suggestion, kit_group, kit_color, kit_tracks, confidence, reason) VALUES ('chk-analysis-b', 7, 'REFEREE', 1, '#3bb3c2', 1, 0.5, '   ')$q$,
+        $q$INSERT INTO track_role_suggestions (analysis_id, track_id, suggestion, kit_group, kit_color, kit_tracks, confidence, reason, dismissed_by) VALUES ('chk-analysis-b', 7, 'REFEREE', 1, '#3bb3c2', 1, 0.5, 'x', 'chk-coach-a')$q$
+    ];
+    statement text;
+    rejected int := 0;
+BEGIN
+    FOREACH statement IN ARRAY bad_rows LOOP
+        BEGIN
+            EXECUTE statement;
+            RAISE EXCEPTION 'accepted a suggestion that breaks a rule: %', statement;
+        EXCEPTION WHEN check_violation THEN
+            rejected := rejected + 1;
+        END;
+    END LOOP;
+    ASSERT rejected = array_length(bad_rows, 1);
+    -- The referee (two tracks of the same kit) and somebody on the touchline (one track).
+    INSERT INTO track_role_suggestions (analysis_id, track_id, suggestion, kit_group, kit_color, kit_tracks, confidence, reason)
+    VALUES ('chk-analysis-b', 3, 'GOALKEEPER_OR_REFEREE', 1, '#3bb3c2', 2, 0.5, 'Camiseta #3bb3c2, de ningún equipo'),
+           ('chk-analysis-b', 5, 'GOALKEEPER_OR_REFEREE', 1, '#3bb3c2', 2, 0.5, 'Camiseta #3bb3c2, de ningún equipo'),
+           ('chk-analysis-b', 6, 'GOALKEEPER_OR_REFEREE', 2, '#23323f', 1, 0.5, 'Camiseta #23323f, de ningún equipo');
+    UPDATE track_role_suggestions SET dismissed_at = now(), dismissed_by = 'chk-coach-a'
+    WHERE analysis_id = 'chk-analysis-b' AND track_id = 6;
+    RAISE NOTICE 'OK role suggestions (% bad rows rejected)', rejected;
+END $$;
+
 ROLLBACK;
