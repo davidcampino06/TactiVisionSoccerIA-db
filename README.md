@@ -68,6 +68,8 @@ una sola vez, en orden, y queda registrada en la tabla `schema_migrations`.
 | `0024_detection_shirt_number.sql` | El dorsal escrito para una trayectoria (`detections.player_number`) debe estar entre 0 y 99, igual que en la API (NOT VALID: no revisa filas anteriores) |
 | `0025_play_and_formation_rules.sql` | Reglas que ya aplicaba la API, ahora también en la base: tipo de acción de una jugada de hasta 40 caracteres, y formaciones numéricas de 2 a 5 líneas de 1 a 6 jugadores que suman 10 (función `formation_name_is_valid`; NOT VALID) |
 | `0026_identification_views.sql` | Vistas de reporte `v_identification_progress` (por clip: trayectorias, con foto, con jugador, solo dorsal, árbitros, externos, pendientes) y `v_action_type_usage` (tipos de acción y cuántas jugadas los usan), con `security_invoker` para que RLS siga aplicando |
+| `0027_migration_checksums.sql` | Columna `schema_migrations.checksum`: `scripts/apply_migrations.py` guarda el SHA-256 de cada migración aplicada y se detiene si una ya aplicada fue editada (el fin de línea de Windows no cuenta como cambio) |
+| `0028_function_comments.sql` | Descripción de las funciones de RLS y de auditoría, que el diccionario de datos ahora lista junto con las políticas RLS de cada tabla |
 
 Base nueva: primero `sql/schema.sql` y luego las migraciones.
 
@@ -101,6 +103,10 @@ python scripts/apply_migrations.py          # las aplica en orden; termina en "D
 
 `git reset origin/main` mueve la rama pero no cambia los archivos de la carpeta: por eso hay que
 revisar `git status` y recuperar con `git restore` lo que quede viejo antes de aplicar.
+
+Si el script dice `CHANGED` en alguna migración ya aplicada, ese archivo fue editado después de
+aplicarse en Neon: no aplica nada hasta que se resuelva. Lo correcto es deshacer la edición y escribir
+una migración nueva; `--accept-changes` solo para cambios inofensivos (un comentario).
 
 Si hay migraciones nuevas, aplícalas en Neon **antes** de desplegar el backend que las usa: el backend
 nuevo falla si busca tablas o reglas que la base todavía no tiene.
