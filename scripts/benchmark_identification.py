@@ -35,6 +35,8 @@ QUERIES = {
         SELECT * FROM track_links WHERE analysis_id = %(analysis)s ORDER BY confidence DESC""",
     "v_track_identities of a clip": """
         SELECT * FROM v_track_identities WHERE analysis_id = %(analysis)s""",
+    "track_identities_of(clip) (migration 0034)": """
+        SELECT * FROM track_identities_of(%(analysis)s)""",
     "v_track_link_review of a clip": """
         SELECT * FROM v_track_link_review WHERE analysis_id = %(analysis)s""",
     "v_identification_progress of a clip": """
