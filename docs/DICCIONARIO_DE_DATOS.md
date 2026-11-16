@@ -229,6 +229,10 @@ Posibles problemas tácticos y recomendaciones de la IA.
 - `idx_recommendations_match`: `btree (match_id)`
 - `idx_recommendations_match_status`: `btree (match_id, status)`
 
+**Disparadores**
+
+- `trg_audit_ai_recommendations`: `AFTER INSERT OR DELETE OR UPDATE` → `audit_row_change()`
+
 **Seguridad por filas (RLS)**
 
 - `recommendations_via_match` (ALL): `(app_rls_bypass() OR (EXISTS ( SELECT 1    FROM matches m   WHERE ((m.id)::text = (ai_recommendations.match_id)::text))))`
@@ -459,6 +463,10 @@ Partidos de cada equipo.
 - `idx_matches_team_date`: `btree (team_id, match_date)`
 - `idx_matches_team_status_date`: `btree (team_id, status, match_date)`
 
+**Disparadores**
+
+- `trg_audit_matches`: `AFTER INSERT OR DELETE OR UPDATE` → `audit_row_change()`
+
 **Seguridad por filas (RLS)**
 
 - `matches_team_isolation` (ALL): `app_can_see_team(team_id)`
@@ -581,6 +589,10 @@ Plantilla de cada equipo.
 - `idx_players_team`: `btree (team_id)`
 - `idx_players_team_shirt`: `btree (team_id, shirt_number)`
 
+**Disparadores**
+
+- `trg_audit_players`: `AFTER INSERT OR DELETE OR UPDATE` → `audit_row_change()`
+
 **Seguridad por filas (RLS)**
 
 - `players_team_isolation` (ALL): `app_can_see_team(team_id)`
@@ -666,6 +678,10 @@ Reportes generados (partido, análisis o evolución).
 - `idx_reports_team`: `btree (team_id)`
 - `idx_reports_team_generated`: `btree (team_id, generated_at DESC)`
 
+**Disparadores**
+
+- `trg_audit_reports`: `AFTER INSERT OR DELETE OR UPDATE` → `audit_row_change()`
+
 **Seguridad por filas (RLS)**
 
 - `reports_team_isolation` (ALL): `app_can_see_team(team_id)`
@@ -750,6 +766,10 @@ Jugadas diseñadas en el editor táctico.
 - Clave foránea → `teams`: `FOREIGN KEY (team_id) REFERENCES teams(id) ON DELETE CASCADE`
 - Clave primaria: `PRIMARY KEY (id)`
 
+**Disparadores**
+
+- `trg_audit_tactical_plays`: `AFTER INSERT OR DELETE OR UPDATE` → `audit_row_change()`
+
 **Seguridad por filas (RLS)**
 
 - `tactical_plays_team_isolation` (ALL): `app_can_see_team(team_id)`
@@ -824,6 +844,10 @@ Equipos; cada entrenador tiene uno.
 - Único: `UNIQUE (coach_id)`
 - Único: `UNIQUE (invitation_code)`
 
+**Disparadores**
+
+- `trg_audit_teams`: `AFTER INSERT OR DELETE OR UPDATE` → `audit_row_change()`
+
 **Seguridad por filas (RLS)**
 
 - `teams_admin_read` (SELECT): `((app_current_role())::text = 'ADMINISTRATOR'::text)`
@@ -848,6 +872,10 @@ Trayectorias que una persona marcó como árbitro o persona externa (no son juga
 - Clave foránea → `video_analyses`: `FOREIGN KEY (analysis_id) REFERENCES video_analyses(id) ON DELETE CASCADE`
 - Clave foránea → `users`: `FOREIGN KEY (labelled_by) REFERENCES users(id) ON DELETE SET NULL`
 - Clave primaria: `PRIMARY KEY (analysis_id, track_id)`
+
+**Disparadores**
+
+- `trg_audit_track_labels`: `AFTER INSERT OR DELETE OR UPDATE` → `audit_row_change('analysis_id', 'track_id')`
 
 **Seguridad por filas (RLS)**
 
@@ -893,6 +921,10 @@ Pares de trayectorias que parecen el mismo jugador cortado en dos (sugeridos por
 - Clave primaria: `PRIMARY KEY (analysis_id, from_track)`
 - Único: `UNIQUE (analysis_id, to_track)`
 
+**Disparadores**
+
+- `trg_audit_track_links`: `AFTER INSERT OR DELETE OR UPDATE` → `audit_row_change('analysis_id', 'from_track')`
+
 **Seguridad por filas (RLS)**
 
 - `track_links_via_analysis` (ALL): `(app_rls_bypass() OR (EXISTS ( SELECT 1    FROM video_analyses va   WHERE ((va.id)::text = (track_links.analysis_id)::text))))`
@@ -932,6 +964,10 @@ Trayectorias con una camiseta de ningún equipo, agrupadas por color: posible á
 **Índices**
 
 - `idx_track_role_suggestions_kit`: `btree (analysis_id, kit_group)`
+
+**Disparadores**
+
+- `trg_audit_track_role_suggestions`: `AFTER UPDATE OF dismissed_at` → `audit_row_change('analysis_id', 'track_id')`
 
 **Seguridad por filas (RLS)**
 
@@ -1002,6 +1038,10 @@ Cuentas de la plataforma: administradores, entrenadores y analistas.
 **Índices**
 
 - `idx_users_team`: `btree (team_id)`
+
+**Disparadores**
+
+- `trg_audit_users`: `AFTER INSERT OR DELETE OR UPDATE` → `audit_row_change()`
 
 ### `video_analyses`
 
@@ -1075,6 +1115,10 @@ Videos subidos a un partido.
 
 - `idx_videos_match`: `btree (match_id)`
 - `idx_videos_situation`: `btree (situation) WHERE (situation IS NOT NULL)`
+
+**Disparadores**
+
+- `trg_audit_videos`: `AFTER INSERT OR DELETE OR UPDATE` → `audit_row_change()`
 
 **Seguridad por filas (RLS)**
 
