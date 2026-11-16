@@ -3,7 +3,7 @@
 > Generado con `scripts/data_dictionary.py` a partir de la base de datos (esquema + migraciones).
 > No se edita a mano: si cambia el esquema, se vuelve a generar.
 
-27 tablas y 4 vistas.
+27 tablas y 6 vistas.
 
 ## Diagrama entidad-relación
 
@@ -883,7 +883,9 @@ Videos subidos a un partido.
 
 | Vista | Qué muestra |
 |---|---|
+| `v_action_type_usage` | Tipos de acción escritos por cada equipo y cuántas de sus jugadas los usan. |
 | `v_analysis_indicators` | Indicadores de cada análisis completado con su partido y equipo. |
+| `v_identification_progress` | Avance de la identificación de cada clip analizado: trayectorias, con foto, con jugador, solo con dorsal, árbitros, externos y pendientes. |
 | `v_match_summary` | Resumen por partido: marcador, videos, análisis y problemas abiertos. |
 | `v_open_issues` | Posibles problemas abiertos, el más urgente primero. |
 | `v_player_participation` | Participación de cada jugador en los videos analizados. |
