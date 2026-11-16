@@ -3,7 +3,7 @@
 > Generado con `scripts/data_dictionary.py` a partir de la base de datos (esquema + migraciones).
 > No se edita a mano: si cambia el esquema, se vuelve a generar.
 
-27 tablas y 6 vistas.
+29 tablas y 8 vistas.
 
 ## Diagrama entidad-relación
 
@@ -122,6 +122,15 @@ erDiagram
         varchar role
         varchar labelled_by FK
     }
+    track_links {
+        varchar analysis_id FK
+        varchar status
+        varchar decided_by FK
+    }
+    track_role_suggestions {
+        varchar analysis_id FK
+        varchar dismissed_by FK
+    }
     track_snapshots {
         varchar analysis_id FK
     }
@@ -175,6 +184,10 @@ erDiagram
     users ||--o{ teams : "coach_id"
     video_analyses ||--o{ track_labels : "analysis_id"
     users |o--o{ track_labels : "labelled_by"
+    video_analyses ||--o{ track_links : "analysis_id"
+    users |o--o{ track_links : "decided_by"
+    video_analyses ||--o{ track_role_suggestions : "analysis_id"
+    users |o--o{ track_role_suggestions : "dismissed_by"
     video_analyses ||--o{ track_snapshots : "analysis_id"
     teams |o--o{ users : "team_id"
     videos ||--o{ video_analyses : "video_id"
@@ -263,7 +276,7 @@ Auditoría: quién cambió qué y cuándo (escrita por triggers).
 |---|---|---|---|---|
 | `id` | bigint | no | nextval('audit_log_id_seq'::regclass) | Identificador. |
 | `table_name` | varchar(63) | no |  | Tabla modificada. |
-| `row_id` | varchar(36) | sí |  | Fila modificada. |
+| `row_id` | varchar(80) | sí |  | Fila modificada: su id, o sus columnas clave unidas por "/" (análisis/trayectoria). |
 | `action` | varchar(6) | no |  | INSERT, UPDATE o DELETE. |
 | `changed_by` | varchar(36) | sí |  | Usuario de la aplicación (app.current_user_id). |
 | `changed_at` | timestamp | no | CURRENT_TIMESTAMP | Fecha. |
@@ -838,6 +851,90 @@ Trayectorias que una persona marcó como árbitro o persona externa (no son juga
 
 - `track_labels_via_analysis` (ALL): `(app_rls_bypass() OR (EXISTS ( SELECT 1    FROM video_analyses va   WHERE ((va.id)::text = (track_labels.analysis_id)::text))))`
 
+### `track_links`
+
+Pares de trayectorias que parecen el mismo jugador cortado en dos (sugeridos por la IA) y la decisión de una persona.
+
+| Columna | Tipo | Nulo | Por defecto | Descripción |
+|---|---|---|---|---|
+| `analysis_id` | varchar(36) | no |  | Análisis al que pertenece; se borra con él. |
+| `from_track` | integer | no |  | Trayectoria que termina (detections.track_id). |
+| `to_track` | integer | no |  | Trayectoria que empieza después y sería el mismo jugador. |
+| `from_last_frame` | integer | no |  | Último cuadro en que se ve from_track. |
+| `to_first_frame` | integer | no |  | Primer cuadro en que se ve to_track (siempre después). |
+| `gap_seconds` | numeric(6,3) | no |  | Segundos en que el jugador no se vio (máximo 1.5 en la IA). |
+| `distance_heights` | numeric(6,3) | no |  | Distancia entre donde debía estar y donde reaparece, en alturas de la caja. |
+| `color_distance` | numeric(7,2) | sí |  | Diferencia del color de camiseta (Lab); NULL si no se midió. |
+| `same_team` | boolean | sí |  | TRUE si las dos tienen el mismo equipo; NULL si alguna no tiene equipo. |
+| `confidence` | numeric(4,3) | no |  | Confianza de la sugerencia (0 a 1). |
+| `status` | varchar(9) | no | 'SUGGESTED' | SUGGESTED (sin revisar), ACCEPTED (es el mismo jugador) o REJECTED. |
+| `decided_by` | varchar(36) | sí |  | Quién la aceptó o rechazó. |
+| `decided_at` | timestamp | sí |  | Cuándo se decidió; NULL mientras es una sugerencia. |
+| `created_at` | timestamp | no | CURRENT_TIMESTAMP | Cuándo se guardó la sugerencia. |
+
+**Reglas**
+
+- Regla: `CHECK (((decided_by IS NULL) OR (decided_at IS NOT NULL)))`
+- Regla: `CHECK ((((status)::text = 'SUGGESTED'::text) = (decided_at IS NULL)))`
+- Regla: `CHECK ((to_first_frame > from_last_frame))`
+- Regla: `CHECK ((from_track <> to_track))`
+- Regla: `CHECK ((color_distance >= (0)::numeric))`
+- Regla: `CHECK (((confidence >= (0)::numeric) AND (confidence <= (1)::numeric)))`
+- Regla: `CHECK ((distance_heights >= (0)::numeric))`
+- Regla: `CHECK ((from_last_frame >= 0))`
+- Regla: `CHECK ((from_track >= 0))`
+- Regla: `CHECK ((gap_seconds > (0)::numeric))`
+- Regla: `CHECK (((status)::text = ANY ((ARRAY['SUGGESTED'::character varying, 'ACCEPTED'::character varying, 'REJECTED'::character varying])::text[])))`
+- Regla: `CHECK ((to_track >= 0))`
+- Clave foránea → `video_analyses`: `FOREIGN KEY (analysis_id) REFERENCES video_analyses(id) ON DELETE CASCADE`
+- Clave foránea → `users`: `FOREIGN KEY (decided_by) REFERENCES users(id) ON DELETE SET NULL`
+- Clave primaria: `PRIMARY KEY (analysis_id, from_track)`
+- Único: `UNIQUE (analysis_id, to_track)`
+
+**Seguridad por filas (RLS)**
+
+- `track_links_via_analysis` (ALL): `(app_rls_bypass() OR (EXISTS ( SELECT 1    FROM video_analyses va   WHERE ((va.id)::text = (track_links.analysis_id)::text))))`
+
+### `track_role_suggestions`
+
+Trayectorias con una camiseta de ningún equipo, agrupadas por color: posible árbitro o arquero (sugerencia de la IA).
+
+| Columna | Tipo | Nulo | Por defecto | Descripción |
+|---|---|---|---|---|
+| `analysis_id` | varchar(36) | no |  | Análisis al que pertenece; se borra con él. |
+| `track_id` | integer | no |  | Trayectoria (detections.track_id). |
+| `suggestion` | varchar(21) | no |  | REFEREE (varias personas a la vez con esa camiseta) o GOALKEEPER_OR_REFEREE (una sola a la vez). |
+| `kit_group` | smallint | no |  | Grupo de camiseta dentro del análisis: las trayectorias del mismo grupo llevan la misma. |
+| `kit_color` | character | no |  | Color medido de esa camiseta (#rrggbb). |
+| `kit_tracks` | smallint | no |  | Cuántas trayectorias llevan esa camiseta. |
+| `confidence` | numeric(4,3) | no |  | Confianza de la sugerencia (0 a 1). |
+| `reason` | varchar(300) | no |  | Por qué se sugiere, en palabras. |
+| `dismissed_by` | varchar(36) | sí |  | Quién la descartó. |
+| `dismissed_at` | timestamp | sí |  | Cuándo se descartó; NULL si sigue vigente. |
+| `created_at` | timestamp | no | CURRENT_TIMESTAMP | Cuándo se guardó la sugerencia. |
+
+**Reglas**
+
+- Regla: `CHECK (((dismissed_by IS NULL) OR (dismissed_at IS NOT NULL)))`
+- Regla: `CHECK (((confidence >= (0)::numeric) AND (confidence <= (1)::numeric)))`
+- Regla: `CHECK ((kit_color ~ '^#[0-9a-f]{6}$'::text))`
+- Regla: `CHECK ((kit_group >= 1))`
+- Regla: `CHECK ((kit_tracks >= 1))`
+- Regla: `CHECK ((length(TRIM(BOTH FROM reason)) > 0))`
+- Regla: `CHECK (((suggestion)::text = ANY ((ARRAY['REFEREE'::character varying, 'GOALKEEPER_OR_REFEREE'::character varying])::text[])))`
+- Regla: `CHECK ((track_id >= 0))`
+- Clave foránea → `video_analyses`: `FOREIGN KEY (analysis_id) REFERENCES video_analyses(id) ON DELETE CASCADE`
+- Clave foránea → `users`: `FOREIGN KEY (dismissed_by) REFERENCES users(id) ON DELETE SET NULL`
+- Clave primaria: `PRIMARY KEY (analysis_id, track_id)`
+
+**Índices**
+
+- `idx_track_role_suggestions_kit`: `btree (analysis_id, kit_group)`
+
+**Seguridad por filas (RLS)**
+
+- `track_role_suggestions_via_analysis` (ALL): `(app_rls_bypass() OR (EXISTS ( SELECT 1    FROM video_analyses va   WHERE ((va.id)::text = (track_role_suggestions.analysis_id)::text))))`
+
 ### `track_snapshots`
 
 Foto de cada trayectoria detectada (el mejor recorte del video) para que el cuerpo técnico reconozca al jugador y lo vincule a la plantilla.
@@ -990,6 +1087,8 @@ Videos subidos a un partido.
 | `v_match_summary` | Resumen por partido: marcador, videos, análisis y problemas abiertos. |
 | `v_open_issues` | Posibles problemas abiertos, el más urgente primero. |
 | `v_player_participation` | Participación de cada jugador en los videos analizados. |
+| `v_track_identities` | Trayectorias unidas por enlaces aceptados: cada una con la primera de su cadena (el mismo jugador). |
+| `v_track_link_review` | Revisión de cada clip analizado: enlaces por decidir, aceptados y rechazados, y sugerencias de árbitro o arquero abiertas. |
 
 ## Funciones
 
@@ -1002,5 +1101,5 @@ Funciones propias de la base (las de extensiones no se listan).
 | `app_current_team()` | character varying | STABLE | Equipo del usuario de la sesión (app.current_team_id); las políticas RLS comparan cada fila con él. |
 | `app_current_user()` | character varying | STABLE | Usuario de la sesión (app.current_user_id), que el backend fija en cada petición; NULL si no hay. |
 | `app_rls_bypass()` | boolean | STABLE | Verdadero cuando la sesión pidió saltarse RLS (app.bypass_rls = on): solo tareas del sistema, como un análisis en segundo plano. |
-| `audit_row_change()` | trigger | VOLATILE | Disparador de auditoría: guarda en audit_log quién cambió qué (solo columnas que cambiaron), sin copiar nunca el hash de la contraseña. |
+| `audit_row_change()` | trigger | VOLATILE | Trigger de auditoría: escribe en audit_log la fila nueva, la borrada o solo las columnas que cambiaron (sin contraseñas ni documentos grandes). La fila se nombra por su id o por las columnas que se le pasan al trigger. |
 | `formation_name_is_valid(formation_name text)` | boolean | IMMUTABLE | Verdadero si el nombre no es un sistema numérico, o si lo es con 2 a 5 líneas de 1 a 6 jugadores que suman 10. |
