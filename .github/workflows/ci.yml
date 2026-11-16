@@ -1,7 +1,7 @@
 # Checks the database scripts on an empty PostgreSQL:
 #   1. sql/schema.sql loads without errors
 #   2. every migration applies in order (scripts/apply_migrations.py)
-#   3. a second run finds nothing pending
+#   3. a second run finds nothing pending, and an applied migration edited afterwards is detected
 #   4. every migration can run again without errors (they are idempotent)
 #   5. the Row-Level Security demo (sql/verify_rls.sql) runs
 #   6. the rule checks (sql/checks.sql): audit log, rejected rows, views
@@ -61,6 +61,18 @@ jobs:
 
       - name: 3. Segunda ejecución sin pendientes
         run: python scripts/apply_migrations.py | tee run.log && grep -q "Nothing to apply." run.log
+
+      - name: 3b. Una migración editada después de aplicarse se detecta
+        run: |
+          test "$(psql -At "$DATABASE_URL" -c "SELECT count(*) FROM schema_migrations WHERE checksum IS NULL")" = 0
+          cp migrations/0001_schema_migrations.sql /tmp/original.sql
+          echo "-- editada" >> migrations/0001_schema_migrations.sql
+          if python scripts/apply_migrations.py > edited.log; then echo "no se detectó el cambio" && exit 1; fi
+          grep -q "CHANGED  0001_schema_migrations.sql" edited.log
+          cp /tmp/original.sql migrations/0001_schema_migrations.sql
+          sed -i 's/$/\r/' migrations/0001_schema_migrations.sql   # fin de línea de Windows: no es un cambio
+          python scripts/apply_migrations.py | grep -q "Nothing to apply."
+          git checkout -- migrations/0001_schema_migrations.sql
 
       - name: 4. Migraciones idempotentes
         run: |
