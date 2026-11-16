@@ -151,4 +151,42 @@ BEGIN
     RAISE NOTICE 'OK track photos (% bad rows rejected, one photo per track)', rejected;
 END $$;
 
+-- 5. Action types written by a team and the limits of a play's texts (migration 0022).
+INSERT INTO team_action_types (id, team_id, name) VALUES ('chk-type-a', 'chk-team-a', 'Saque de banda largo');
+DO $$
+DECLARE
+    bad_rows text[] := ARRAY[
+        $q$INSERT INTO team_action_types (id, team_id, name) VALUES ('x5', 'chk-team-a', 'x')$q$,
+        $q$INSERT INTO team_action_types (id, team_id, name) VALUES ('x6', 'chk-team-a', ' Con espacios ')$q$,
+        $q$INSERT INTO tactical_plays (id, team_id, name) VALUES ('x7', 'chk-team-a', repeat('n', 51))$q$,
+        $q$INSERT INTO tactical_plays (id, team_id, name, description) VALUES ('x8', 'chk-team-a', 'Jugada', repeat('d', 101))$q$
+    ];
+    statement text;
+    rejected int := 0;
+BEGIN
+    FOREACH statement IN ARRAY bad_rows LOOP
+        BEGIN
+            EXECUTE statement;
+            RAISE EXCEPTION 'accepted a row that breaks a rule: %', statement;
+        EXCEPTION WHEN check_violation THEN
+            rejected := rejected + 1;
+        END;
+    END LOOP;
+    ASSERT rejected = array_length(bad_rows, 1);
+
+    -- One name per team whatever the case; another team may use the same name.
+    BEGIN
+        INSERT INTO team_action_types (id, team_id, name) VALUES ('x9', 'chk-team-a', 'SAQUE DE BANDA LARGO');
+        RAISE EXCEPTION 'the same action type must not be saved twice in a team';
+    EXCEPTION WHEN unique_violation THEN
+        NULL;
+    END;
+    INSERT INTO team_action_types (id, team_id, name) VALUES ('chk-type-b', 'chk-team-b', 'Saque de banda largo');
+
+    -- The limits are exactly 50 and 100 characters.
+    INSERT INTO tactical_plays (id, team_id, name, description)
+    VALUES ('chk-play-a', 'chk-team-a', repeat('n', 50), repeat('d', 100));
+    RAISE NOTICE 'OK action types and play texts (% bad rows rejected, unique per team)', rejected;
+END $$;
+
 ROLLBACK;
