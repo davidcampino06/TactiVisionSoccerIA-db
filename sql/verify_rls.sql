@@ -17,17 +17,21 @@ SELECT 'app, no team' AS who, count(*) AS matches, (SELECT count(*) FROM notific
 SELECT set_config('app.current_team_id', current_setting('demo.team_id'), true);
 SELECT 'app, first team' AS who, count(*) AS matches, (SELECT count(*) FROM notifications) AS notifications FROM matches;
 
--- 3b) The same isolation covers the newer tables: clips' track photos and labels (through their
---     analysis) and the team's own action types. Before choosing a team they all count 0.
+-- 3b) The same isolation covers the newer tables: clips' track photos, labels, suggested links and
+--     referee / goalkeeper suggestions (through their analysis) and the team's own action types. Before choosing a team they all count 0.
 SELECT 'app, first team' AS who,
        (SELECT count(*) FROM track_snapshots) AS track_photos,
        (SELECT count(*) FROM track_labels) AS track_labels,
        (SELECT count(*) FROM team_action_types) AS action_types,
-       (SELECT count(*) FROM v_identification_progress) AS identified_clips;
+       (SELECT count(*) FROM v_identification_progress) AS identified_clips,
+       (SELECT count(*) FROM track_links) AS track_links,
+       (SELECT count(*) FROM track_role_suggestions) AS role_suggestions,
+       (SELECT count(*) FROM v_track_link_review) AS reviewed_clips;
 SELECT set_config('app.current_team_id', 'no-such-team', true);
 SELECT 'app, unknown team' AS who,
        (SELECT count(*) FROM track_snapshots) AS track_photos,
-       (SELECT count(*) FROM team_action_types) AS action_types;
+       (SELECT count(*) FROM team_action_types) AS action_types,
+       (SELECT count(*) FROM track_links) AS track_links;
 
 -- 4) Policies installed per table.
 SELECT tablename, policyname FROM pg_policies WHERE schemaname = 'public' ORDER BY tablename;
