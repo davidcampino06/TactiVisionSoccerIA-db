@@ -150,6 +150,14 @@ JOIN spans pb ON pb.analysis_id = i.analysis_id AND pb.track_id = i.track_id
 WHERE pb.first_frame <= pa.last_frame
 ORDER BY 1, 2;
 
+--     Accepted links in a loop (1 -> 2 -> 1): each row is valid alone, but the loop has no first
+--     track, so v_track_identities leaves them out. One of the links must be rejected.
+SELECT l.analysis_id AS analisis, l.from_track AS de, l.to_track AS a
+FROM track_links l
+WHERE l.status = 'ACCEPTED'
+  AND NOT EXISTS (SELECT 1 FROM v_track_identities i WHERE i.analysis_id = l.analysis_id AND i.track_id = l.to_track)
+ORDER BY 1, 2;
+
 -- 8d. Referee / goalkeeper suggestions (migration 0030).
 --     A kit that says it has N tracks but has a different number of rows, or a suggestion about a
 --     track that has no detections: the analysis wrote them half, or the detections were replaced.
