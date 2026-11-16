@@ -50,14 +50,15 @@ psql -q -v ON_ERROR_STOP=1 "$DATABASE_URL" -f sql/seed_demo.sql > /dev/null
 psql -q -v ON_ERROR_STOP=1 "$DATABASE_URL" -f sql/seed_demo.sql > /dev/null
 test "$(psql -At "$DATABASE_URL" -c "SELECT count(*) FROM players WHERE team_id = 'demo-team'")" = 14
 psql -q -v ON_ERROR_STOP=1 "$DATABASE_URL" -f sql/verify_data.sql > /dev/null; echo OK
-step "9. Respaldo y restauración (con una foto binaria)"
+step "9. Respaldo y restauración (con una foto binaria, un enlace decidido y una sugerencia)"
 psql -q -v ON_ERROR_STOP=1 "$DATABASE_URL" -c "INSERT INTO track_snapshots (analysis_id, track_id, frame_number, timestamp, confidence, width, height, image) SELECT id, 1, 0, 0, 0.9, 20, 40, decode('ffd8ffe000104a4649460001', 'hex') FROM video_analyses WHERE id = 'demo-analysis-5'"
+psql -q -v ON_ERROR_STOP=1 "$DATABASE_URL" -c "INSERT INTO track_links (analysis_id, from_track, to_track, from_last_frame, to_first_frame, gap_seconds, distance_heights, color_distance, same_team, confidence, status, decided_by, decided_at) SELECT a.id, 1, 2, 10, 18, 0.32, 0.12, 4.28, true, 0.9, 'ACCEPTED', t.coach_id, now() FROM video_analyses a, teams t WHERE a.id = 'demo-analysis-5' AND t.id = 'demo-team'; INSERT INTO track_role_suggestions (analysis_id, track_id, suggestion, kit_group, kit_color, kit_tracks, confidence, reason) VALUES ('demo-analysis-5', 3, 'GOALKEEPER_OR_REFEREE', 1, '#3bb3c2', 1, 0.5, 'Camiseta #3bb3c2, de ningún equipo')"
 "$PYTHON" scripts/backup_database.py --output backups/local > /dev/null
 psql -q "$ADMIN_URL" -c "CREATE DATABASE tactivision_restore"
 psql -q -v ON_ERROR_STOP=1 "$RESTORE_URL" -f sql/schema.sql > /dev/null
 DATABASE_URL="$RESTORE_URL" "$PYTHON" scripts/apply_migrations.py > /dev/null
 DATABASE_URL="$RESTORE_URL" "$PYTHON" scripts/backup_database.py --restore backups/local --yes > /dev/null
-for table in users teams players matches videos video_analyses detections tactical_indicators track_snapshots audit_log; do
+for table in users teams players matches videos video_analyses detections tactical_indicators track_snapshots track_links track_role_suggestions audit_log; do
     query="SELECT md5(coalesce(string_agg(t::text, '|' ORDER BY t::text), '')) FROM $table t"
     test "$(psql -At "$DATABASE_URL" -c "$query")" = "$(psql -At "$RESTORE_URL" -c "$query")" \
         || { echo "$table differs after the restore"; exit 1; }
