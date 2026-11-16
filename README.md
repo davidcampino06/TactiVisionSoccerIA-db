@@ -62,6 +62,8 @@ una sola vez, en orden, y queda registrada en la tabla `schema_migrations`.
 | `0018_review_notes_and_strengths.sql` | Notas del cuerpo técnico sobre cada posible problema (`recommendation_notes`, con RLS y aviso en la campana) y revisión de las fortalezas (`analysis_strengths.status`): el plan de partido solo usa lo confirmado |
 | `0019_indicator_samples.sql` | Cuántos cuadros pudo juzgar cada indicador (`samples`) y qué proporción quedó del lado malo del umbral (`exceed_ratio`): el seguimiento de un problema confirmado distingue "no apareció" de "no se pudo juzgar" |
 | `0020_video_situation.sql` | Situación táctica de cada clip, elegida por una persona (`videos.situation`: salida de balón, ataque organizado, transiciones, presión alta, bloque defensivo, balón parado) y una nota corta: la biblioteca de clips los filtra por situación |
+| `0021_track_snapshots.sql` | Foto de cada trayectoria detectada (`track_snapshots`: el mejor recorte del video, JPEG pequeño, con RLS por análisis) para que el cuerpo técnico reconozca al jugador y lo vincule a la plantilla; los análisis anteriores no tienen fotos |
+| `0022_team_action_types.sql` | Tipos de acción escritos por el equipo (`team_action_types`, únicos por equipo, con RLS) y límites de las jugadas nuevas: nombre de 50 caracteres y descripción de 100 |
 
 Base nueva: primero `sql/schema.sql` y luego las migraciones.
 
