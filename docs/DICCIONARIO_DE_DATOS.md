@@ -1268,3 +1268,4 @@ Funciones propias de la base (las de extensiones no se listan).
 | `app_rls_bypass()` | boolean | STABLE | Verdadero cuando la sesión pidió saltarse RLS (app.bypass_rls = on): solo tareas del sistema, como un análisis en segundo plano. |
 | `audit_row_change()` | trigger | VOLATILE | Trigger de auditoría: escribe en audit_log la fila nueva, la borrada o solo las columnas que cambiaron (sin contraseñas ni documentos grandes). La fila se nombra por su id o por las columnas que se le pasan al trigger. |
 | `formation_name_is_valid(formation_name text)` | boolean | IMMUTABLE | Verdadero si el nombre no es un sistema numérico, o si lo es con 2 a 5 líneas de 1 a 6 jugadores que suman 10. |
+| `track_identities_of(p_analysis_id character varying)` | TABLE(track_id integer, person_track integer, step integer) | STABLE | Cadenas de trayectorias unidas por enlaces aceptados de UN análisis (lo mismo que v_track_identities, sin recorrer los demás clips). |
