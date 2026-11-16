@@ -105,7 +105,7 @@ BEGIN
 END $$;
 RESET ROLE;
 
--- 4. Track photos (migration 0021): one small JPEG per track, gone with its analysis.
+-- 4. Track photos (migration 0021): one small JPEG per track; shirt numbers 0 to 99 (migration 0024).
 INSERT INTO videos (id, match_id, file_name, file_path, format, file_size)
 VALUES ('chk-video-a', 'chk-match-a', 'clip.mp4', 'uploads/clip.mp4', 'MP4', 1000);
 INSERT INTO video_analyses (id, video_id, status) VALUES ('chk-analysis-a', 'chk-video-a', 'COMPLETED');
@@ -124,7 +124,9 @@ DECLARE
         $q$INSERT INTO track_snapshots (analysis_id, track_id, frame_number, timestamp, confidence, width, height, image)
            VALUES ('chk-analysis-a', 5, -1, 0, 0.9, 20, 40, '\xffd8ff'::bytea)$q$,
         $q$INSERT INTO track_snapshots (analysis_id, track_id, frame_number, timestamp, confidence, width, height, image)
-           VALUES ('chk-analysis-a', 6, 0, 0, 0.9, 20, 0, '\xffd8ff'::bytea)$q$
+           VALUES ('chk-analysis-a', 6, 0, 0, 0.9, 20, 0, '\xffd8ff'::bytea)$q$,
+        $q$UPDATE detections SET player_number = 100 WHERE id = 'chk-det-a'$q$,
+        $q$UPDATE detections SET player_number = -1 WHERE id = 'chk-det-a'$q$
     ];
     statement text;
     rejected int := 0;
@@ -132,7 +134,7 @@ BEGIN
     FOREACH statement IN ARRAY bad_rows LOOP
         BEGIN
             EXECUTE statement;
-            RAISE EXCEPTION 'accepted a track photo that breaks a rule: %', statement;
+            RAISE EXCEPTION 'accepted a track row that breaks a rule: %', statement;
         EXCEPTION WHEN check_violation THEN
             rejected := rejected + 1;
         END;
