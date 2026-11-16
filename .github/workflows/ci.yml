@@ -7,7 +7,7 @@
 #   6. the rule checks (sql/checks.sql): audit log, rejected rows, views
 #   7. docs/DICCIONARIO_DE_DATOS.md matches the schema (regenerated and compared)
 #   8. the demo data loads twice without duplicates, and the health report runs on it
-#   9. a backup restored into a second empty database gives back the same data
+#   9. a backup restored into a second empty database gives back the same data (also a binary track photo)
 #  10. removing the demo data leaves no demo rows
 name: CI
 
@@ -104,12 +104,14 @@ jobs:
         env:
           RESTORE_URL: postgresql://postgres:postgres@localhost:5432/tactivision_restore
         run: |
+          # A track photo (binary data, migration 0021) goes through the backup too.
+          psql -v ON_ERROR_STOP=1 "$DATABASE_URL" -c "INSERT INTO track_snapshots (analysis_id, track_id, frame_number, timestamp, confidence, width, height, image) SELECT id, 1, 0, 0, 0.9, 20, 40, decode('ffd8ffe000104a4649460001', 'hex') FROM video_analyses WHERE id = 'demo-analysis-5'"
           python scripts/backup_database.py --output backups/ci
           psql -v ON_ERROR_STOP=1 "$DATABASE_URL" -c "CREATE DATABASE tactivision_restore"
           psql -q -v ON_ERROR_STOP=1 "$RESTORE_URL" -f sql/schema.sql
           DATABASE_URL="$RESTORE_URL" python scripts/apply_migrations.py
           DATABASE_URL="$RESTORE_URL" python scripts/backup_database.py --restore backups/ci --yes
-          for table in users teams players matches videos video_analyses detections tactical_indicators audit_log; do
+          for table in users teams players matches videos video_analyses detections tactical_indicators track_snapshots audit_log; do
             query="SELECT md5(coalesce(string_agg(t::text, '|' ORDER BY t::text), '')) FROM $table t"
             test "$(psql -At "$DATABASE_URL" -c "$query")" = "$(psql -At "$RESTORE_URL" -c "$query")" \
               || (echo "$table differs after the restore" && exit 1)
