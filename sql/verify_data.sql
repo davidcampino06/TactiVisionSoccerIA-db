@@ -74,6 +74,34 @@ SELECT r.id, r.title, r.severity
 FROM ai_recommendations r
 WHERE NOT EXISTS (SELECT 1 FROM recommendation_indicators ri WHERE ri.recommendation_id = r.id);
 
+-- 8b. Track identification (migrations 0021, 0023, 0024). All three lists should be empty.
+--     Photos of tracks that have no detections left (a photo nobody can link to a player):
+SELECT s.analysis_id AS analisis, s.track_id AS trayectoria
+FROM track_snapshots s
+WHERE NOT EXISTS (SELECT 1 FROM detections d WHERE d.video_analysis_id = s.analysis_id AND d.track_id = s.track_id)
+ORDER BY 1, 2;
+
+--     Tracks marked as referee or outsider that still have a squad player or a shirt number:
+SELECT l.analysis_id AS analisis, l.track_id AS trayectoria, l.role AS marca,
+       count(*) FILTER (WHERE d.player_id IS NOT NULL OR d.player_number IS NOT NULL) AS detecciones_con_jugador
+FROM track_labels l
+JOIN detections d ON d.video_analysis_id = l.analysis_id AND d.track_id = l.track_id
+GROUP BY 1, 2, 3
+HAVING count(*) FILTER (WHERE d.player_id IS NOT NULL OR d.player_number IS NOT NULL) > 0
+ORDER BY 1, 2;
+
+--     Tracks whose detections disagree on who the player is (one track = one person: the app
+--     writes the player and the number on ALL the detections of the track, never on part of them):
+SELECT video_analysis_id AS analisis, track_id AS trayectoria, count(*) AS detecciones,
+       count(player_id) AS con_jugador, count(player_number) AS con_dorsal,
+       count(DISTINCT player_id) AS jugadores, count(DISTINCT player_number) AS dorsales
+FROM detections
+WHERE track_id IS NOT NULL
+GROUP BY 1, 2
+HAVING count(DISTINCT player_id) > 1 OR count(DISTINCT player_number) > 1
+    OR count(player_id) NOT IN (0, count(*)) OR count(player_number) NOT IN (0, count(*))
+ORDER BY 1, 2;
+
 -- 9. Size of each team: the general picture (not an error list).
 SELECT t.name AS equipo,
        (SELECT count(*) FROM players p WHERE p.team_id = t.id) AS jugadores,
