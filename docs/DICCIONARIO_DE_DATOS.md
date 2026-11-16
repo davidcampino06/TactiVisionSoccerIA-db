@@ -314,11 +314,12 @@ Jugadores y balón detectados en cada cuadro.
 | `bounding_box_width` | numeric(10,4) | no |  | Caja: ancho. |
 | `bounding_box_height` | numeric(10,4) | no |  | Caja: alto. |
 | `player_number` | integer | sí |  | Dorsal (0 a 99) que una persona escribió para la trayectoria; lo comparten todas sus detecciones. |
-| `track_id` | integer | sí |  | Pista del seguimiento (mismo jugador entre cuadros). |
+| `track_id` | integer | sí |  | Número de la trayectoria (0 o más) que dio el tracker; NULL si no siguió a esa persona. |
 
 **Reglas**
 
 - Regla: `CHECK (((player_number IS NULL) OR ((player_number >= 0) AND (player_number <= 99)))) NOT VALID` *(NOT VALID: solo filas nuevas)*
+- Regla: `CHECK (((track_id IS NULL) OR (track_id >= 0))) NOT VALID` *(NOT VALID: solo filas nuevas)*
 - Regla: `CHECK (((confidence >= (0)::numeric) AND (confidence <= (1)::numeric)))`
 - Clave foránea → `players`: `FOREIGN KEY (player_id) REFERENCES players(id) ON DELETE SET NULL`
 - Clave foránea → `video_analyses`: `FOREIGN KEY (video_analysis_id) REFERENCES video_analyses(id) ON DELETE CASCADE`
@@ -842,6 +843,7 @@ Trayectorias que una persona marcó como árbitro o persona externa (no son juga
 
 **Reglas**
 
+- Regla: `CHECK ((track_id >= 0)) NOT VALID` *(NOT VALID: solo filas nuevas)*
 - Regla: `CHECK (((role)::text = ANY ((ARRAY['REFEREE'::character varying, 'OTHER'::character varying])::text[])))`
 - Clave foránea → `video_analyses`: `FOREIGN KEY (analysis_id) REFERENCES video_analyses(id) ON DELETE CASCADE`
 - Clave foránea → `users`: `FOREIGN KEY (labelled_by) REFERENCES users(id) ON DELETE SET NULL`
@@ -953,6 +955,7 @@ Foto de cada trayectoria detectada (el mejor recorte del video) para que el cuer
 
 **Reglas**
 
+- Regla: `CHECK ((track_id >= 0)) NOT VALID` *(NOT VALID: solo filas nuevas)*
 - Regla: `CHECK (((confidence >= (0)::numeric) AND (confidence <= (1)::numeric)))`
 - Regla: `CHECK ((frame_number >= 0))`
 - Regla: `CHECK ((height > 0))`
