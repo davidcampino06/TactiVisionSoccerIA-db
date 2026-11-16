@@ -51,6 +51,23 @@ LEFT JOIN pg_class ref ON ref.oid = con.confrelid
 WHERE n.nspname = 'public'
 ORDER BY cl.relname, con.contype, con.conname
 """
+POLICIES = """
+SELECT tablename, policyname, cmd, qual FROM pg_policies WHERE schemaname = 'public' ORDER BY tablename, policyname
+"""
+RLS_ENABLED = """
+SELECT c.relname FROM pg_class c JOIN pg_namespace n ON n.oid = c.relnamespace
+WHERE n.nspname = 'public' AND c.relkind = 'r' AND c.relrowsecurity
+"""
+# Functions of the project only: those created by an extension (pg_depend 'e') are left out.
+FUNCTIONS = """
+SELECT p.proname, pg_get_function_identity_arguments(p.oid), pg_get_function_result(p.oid),
+       CASE p.provolatile WHEN 'i' THEN 'IMMUTABLE' WHEN 's' THEN 'STABLE' ELSE 'VOLATILE' END,
+       obj_description(p.oid, 'pg_proc')
+FROM pg_proc p JOIN pg_namespace n ON n.oid = p.pronamespace
+WHERE n.nspname = 'public' AND p.prokind = 'f'
+  AND NOT EXISTS (SELECT 1 FROM pg_depend d WHERE d.objid = p.oid AND d.deptype = 'e')
+ORDER BY p.proname
+"""
 INDEXES = """
 SELECT tablename, indexname, indexdef FROM pg_indexes WHERE schemaname = 'public' ORDER BY tablename, indexname
 """
@@ -73,6 +90,11 @@ def build(url: str) -> str:
         indexes = defaultdict(list)
         for table, name, definition in fetch(cursor, INDEXES):
             indexes[table].append((name, definition))
+        policies = defaultdict(list)
+        for table, *rest in fetch(cursor, POLICIES):
+            policies[table].append(rest)
+        rls_enabled = {row[0] for row in fetch(cursor, RLS_ENABLED)}
+        functions = fetch(cursor, FUNCTIONS)
 
     real_tables = [(name, text) for name, text, kind in tables if kind == "r" and name not in SKIP]
     views = [(name, text) for name, text, kind in tables if kind == "v"]
@@ -116,10 +138,20 @@ def build(url: str) -> str:
                  if not name.endswith("_pkey") and "UNIQUE" not in definition]
         if extra:
             out += ["", "**Índices**", "", *extra]
+        if table in rls_enabled:
+            # Row-Level Security (migration 0002 and later): who can see or change each row.
+            out += ["", "**Seguridad por filas (RLS)**", ""]
+            out += [f"- `{name}` ({command}): `{(rule or 'true').replace(chr(10), ' ')}`"
+                    for name, command, rule in policies[table]] or ["- Activa sin políticas: nadie ve filas salvo el dueño."]
         out.append("")
 
     out += ["## Vistas", "", "| Vista | Qué muestra |", "|---|---|"]
     out += [f"| `{name}` | {text or ''} |" for name, text in views]
+
+    out += ["", "## Funciones", "", "Funciones propias de la base (las de extensiones no se listan).", "",
+            "| Función | Devuelve | Volatilidad | Qué hace |", "|---|---|---|---|"]
+    out += [f"| `{name}({arguments})` | {result} | {volatility} | {comment or ''} |"
+            for name, arguments, result, volatility, comment in functions]
     return "\n".join(out) + "\n"
 
 
