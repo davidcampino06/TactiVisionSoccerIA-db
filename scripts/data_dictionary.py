@@ -4,8 +4,8 @@
     DATABASE_URL="postgresql://..." python scripts/data_dictionary.py --stdout   # print it instead
 
 Everything comes from the catalog, so the document never drifts from the real schema:
-descriptions from COMMENT ON (migration 0010), columns and types from information_schema,
-keys, CHECK rules and indexes from pg_catalog. The ER diagram is Mermaid, which GitHub draws.
+descriptions from COMMENT ON (migration 0010), columns and types of tables and views from
+information_schema, keys, CHECK rules and indexes from pg_catalog. The ER diagram is Mermaid, which GitHub draws.
 """
 
 from __future__ import annotations
@@ -147,6 +147,10 @@ def build(url: str) -> str:
 
     out += ["## Vistas", "", "| Vista | Qué muestra |", "|---|---|"]
     out += [f"| `{name}` | {text or ''} |" for name, text in views]
+    # The columns of each view, so a report can be written from this document alone.
+    for name, _ in views:
+        out += ["", f"### `{name}`", "", "| Columna | Tipo |", "|---|---|"]
+        out += [f"| `{column}` | {data_type} |" for column, data_type, *_ in columns[name]]
 
     out += ["", "## Funciones", "", "Funciones propias de la base (las de extensiones no se listan).", "",
             "| Función | Devuelve | Volatilidad | Qué hace |", "|---|---|---|---|"]
