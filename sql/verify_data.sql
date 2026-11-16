@@ -132,6 +132,24 @@ LEFT JOIN LATERAL (SELECT min(frame_number) AS first_frame FROM detections d
 WHERE f.last_frame IS DISTINCT FROM l.from_last_frame OR t.first_frame IS DISTINCT FROM l.to_first_frame
 ORDER BY 1, 2;
 
+--     Chains of accepted links that cannot be one player: a track of the chain starts before the
+--     previous one ends (he would be in two places at once).
+WITH spans AS (
+    SELECT video_analysis_id AS analysis_id, track_id, min(frame_number) AS first_frame, max(frame_number) AS last_frame
+    FROM detections
+    WHERE track_id IS NOT NULL
+    GROUP BY 1, 2
+)
+SELECT i.analysis_id AS analisis, i.person_track AS jugador, previous.track_id AS antes, i.track_id AS despues,
+       pa.last_frame AS termina, pb.first_frame AS empieza
+FROM v_track_identities i
+JOIN v_track_identities previous
+  ON previous.analysis_id = i.analysis_id AND previous.person_track = i.person_track AND previous.step = i.step - 1
+JOIN spans pa ON pa.analysis_id = i.analysis_id AND pa.track_id = previous.track_id
+JOIN spans pb ON pb.analysis_id = i.analysis_id AND pb.track_id = i.track_id
+WHERE pb.first_frame <= pa.last_frame
+ORDER BY 1, 2;
+
 -- 9. Size of each team: the general picture (not an error list).
 SELECT t.name AS equipo,
        (SELECT count(*) FROM players p WHERE p.team_id = t.id) AS jugadores,
