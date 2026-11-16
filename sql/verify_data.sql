@@ -150,6 +150,19 @@ JOIN spans pb ON pb.analysis_id = i.analysis_id AND pb.track_id = i.track_id
 WHERE pb.first_frame <= pa.last_frame
 ORDER BY 1, 2;
 
+-- 8d. Referee / goalkeeper suggestions (migration 0030).
+--     A kit that says it has N tracks but has a different number of rows, or a suggestion about a
+--     track that has no detections: the analysis wrote them half, or the detections were replaced.
+SELECT analysis_id AS analisis, kit_group AS grupo, min(kit_tracks) AS dice, count(*) AS tiene
+FROM track_role_suggestions
+GROUP BY 1, 2
+HAVING count(*) <> min(kit_tracks) OR min(kit_tracks) <> max(kit_tracks)
+ORDER BY 1, 2;
+SELECT s.analysis_id AS analisis, s.track_id AS trayectoria, s.suggestion AS sugerencia
+FROM track_role_suggestions s
+WHERE NOT EXISTS (SELECT 1 FROM detections d WHERE d.video_analysis_id = s.analysis_id AND d.track_id = s.track_id)
+ORDER BY 1, 2;
+
 -- 9. Size of each team: the general picture (not an error list).
 SELECT t.name AS equipo,
        (SELECT count(*) FROM players p WHERE p.team_id = t.id) AS jugadores,
