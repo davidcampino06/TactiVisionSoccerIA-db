@@ -156,6 +156,16 @@ SELECT changed_at, action, changed_by, changed_fields FROM audit_log
 WHERE table_name = 'matches' ORDER BY changed_at DESC LIMIT 20;
 ```
 
+Desde la migración 0031 también se auditan `track_labels` (marcas de árbitro o persona externa),
+`track_links` (quién aceptó o rechazó cada enlace) y las sugerencias de árbitro o arquero descartadas.
+Esas tablas no tienen `id`: la fila se nombra por sus columnas clave, que el trigger recibe como
+argumentos (`audit_row_change('analysis_id', 'track_id')`), y queda como `análisis/trayectoria`:
+
+```sql
+SELECT changed_at, action, changed_by, changed_fields -> 'status' AS estado FROM audit_log
+WHERE table_name = 'track_links' AND row_id LIKE '<id del análisis>/%' ORDER BY changed_at;
+```
+
 ## Reglas de datos (migración 0007)
 
 Las reglas que antes solo validaba el backend ahora también las cumple la base de datos, así que ni
