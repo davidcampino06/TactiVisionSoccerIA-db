@@ -1093,6 +1093,124 @@ Videos subidos a un partido.
 | `v_track_identities` | Trayectorias unidas por enlaces aceptados: cada una con la primera de su cadena (el mismo jugador). |
 | `v_track_link_review` | Revisión de cada clip analizado: enlaces por decidir, aceptados y rechazados, y sugerencias de árbitro o arquero abiertas. |
 
+### `v_action_type_usage`
+
+| Columna | Tipo |
+|---|---|
+| `team_id` | varchar(36) |
+| `action_type_id` | varchar(36) |
+| `name` | varchar(40) |
+| `created_at` | timestamp |
+| `plays` | bigint |
+
+### `v_analysis_indicators`
+
+| Columna | Tipo |
+|---|---|
+| `team_id` | varchar(36) |
+| `match_id` | varchar(36) |
+| `opponent` | varchar(255) |
+| `match_date` | timestamp |
+| `analysis_id` | varchar(36) |
+| `analysis_mode` | varchar(30) |
+| `completed_at` | timestamp |
+| `indicator` | varchar(255) |
+| `value` | numeric(10,4) |
+| `unit` | varchar(50) |
+| `threshold` | numeric(10,4) |
+
+### `v_identification_progress`
+
+| Columna | Tipo |
+|---|---|
+| `team_id` | varchar(36) |
+| `match_id` | varchar(36) |
+| `opponent` | varchar(255) |
+| `video_id` | varchar(36) |
+| `file_name` | varchar(255) |
+| `analysis_id` | varchar(36) |
+| `completed_at` | timestamp |
+| `tracks` | bigint |
+| `tracks_with_photo` | bigint |
+| `with_player` | bigint |
+| `number_only` | bigint |
+| `referees` | bigint |
+| `outsiders` | bigint |
+| `pending` | bigint |
+
+### `v_match_summary`
+
+| Columna | Tipo |
+|---|---|
+| `match_id` | varchar(36) |
+| `team_id` | varchar(36) |
+| `opponent` | varchar(255) |
+| `match_date` | timestamp |
+| `is_home` | boolean |
+| `status` | varchar(255) |
+| `result` | varchar(255) |
+| `home_score` | integer |
+| `away_score` | integer |
+| `videos` | bigint |
+| `completed_analyses` | bigint |
+| `open_issues` | bigint |
+| `confirmed_issues` | bigint |
+
+### `v_open_issues`
+
+| Columna | Tipo |
+|---|---|
+| `team_id` | varchar(36) |
+| `recommendation_id` | varchar(36) |
+| `match_id` | varchar(36) |
+| `opponent` | varchar(255) |
+| `match_date` | timestamp |
+| `title` | varchar(255) |
+| `severity` | varchar(50) |
+| `confidence` | numeric(10,4) |
+| `status` | varchar(50) |
+| `created_at` | timestamp |
+
+### `v_player_participation`
+
+| Columna | Tipo |
+|---|---|
+| `player_id` | varchar(36) |
+| `team_id` | varchar(36) |
+| `first_name` | varchar(255) |
+| `last_name` | varchar(255) |
+| `shirt_number` | integer |
+| `detections` | bigint |
+| `matches` | bigint |
+| `analyses` | bigint |
+
+### `v_track_identities`
+
+| Columna | Tipo |
+|---|---|
+| `analysis_id` | varchar(36) |
+| `track_id` | integer |
+| `person_track` | integer |
+| `step` | integer |
+
+### `v_track_link_review`
+
+| Columna | Tipo |
+|---|---|
+| `team_id` | varchar(36) |
+| `match_id` | varchar(36) |
+| `opponent` | varchar(255) |
+| `video_id` | varchar(36) |
+| `file_name` | varchar(255) |
+| `analysis_id` | varchar(36) |
+| `completed_at` | timestamp |
+| `links_pending` | bigint |
+| `links_accepted` | bigint |
+| `links_rejected` | bigint |
+| `role_suggestions` | bigint |
+| `role_suggestions_open` | bigint |
+| `kits` | bigint |
+
 ## Funciones
 
 Funciones propias de la base (las de extensiones no se listan).
