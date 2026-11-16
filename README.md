@@ -194,9 +194,16 @@ quitarlos (o cambiar esas contraseñas) después de la presentación.
 
 ## Comprobaciones
 
+Antes de subir cambios, `scripts/ci_local.sh` corre en tu PostgreSQL local los mismos pasos que GitHub
+Actions (crea y borra dos bases de prueba; nunca lo apuntes a Neon):
+
+```bash
+ADMIN_URL=postgresql://postgres:postgres@localhost:5432/postgres bash scripts/ci_local.sh
+```
+
 | Archivo | Qué hace | Modifica datos |
 |---|---|---|
-| `sql/verify_rls.sql` | Demostración de Row-Level Security | No |
+| `sql/verify_rls.sql` | Demostración de Row-Level Security, también en las fotos de trayectorias, sus marcas y los tipos de acción | No |
 | `sql/checks.sql` | Prueba con `ASSERT` la auditoría, que se rechacen 8 filas inválidas, las vistas y RLS a través de ellas; las fotos de trayectorias, los tipos de acción, las marcas de árbitro/externo y los dorsales 0-99 (migraciones 0021 a 0024), con su RLS y su borrado junto al análisis | No (termina en `ROLLBACK`) |
 | `sql/verify_data.sql` | Reporte de salud: reglas sin validar, análisis atascados, videos sin análisis, dorsales repetidos, cuentas sin equipo, fotos sin trayectoria, árbitros con jugador asignado, trayectorias identificadas a medias, tamaño de cada equipo | No (solo lectura) |
 
