@@ -303,4 +303,46 @@ BEGIN
 END $$;
 RESET ROLE;
 
+-- 9. Suggested links between cut tracks (migration 0029).
+DO $$
+DECLARE
+    bad_rows text[] := ARRAY[
+        $q$INSERT INTO track_links (analysis_id, from_track, to_track, from_last_frame, to_first_frame, gap_seconds, distance_heights, confidence) VALUES ('chk-analysis-b', 5, 5, 10, 20, 0.4, 0.1, 0.9)$q$,
+        $q$INSERT INTO track_links (analysis_id, from_track, to_track, from_last_frame, to_first_frame, gap_seconds, distance_heights, confidence) VALUES ('chk-analysis-b', 5, 6, 20, 20, 0.4, 0.1, 0.9)$q$,
+        $q$INSERT INTO track_links (analysis_id, from_track, to_track, from_last_frame, to_first_frame, gap_seconds, distance_heights, confidence) VALUES ('chk-analysis-b', 5, 6, 10, 20, 0, 0.1, 0.9)$q$,
+        $q$INSERT INTO track_links (analysis_id, from_track, to_track, from_last_frame, to_first_frame, gap_seconds, distance_heights, confidence) VALUES ('chk-analysis-b', 5, 6, 10, 20, 0.4, 0.1, 1.2)$q$,
+        $q$INSERT INTO track_links (analysis_id, from_track, to_track, from_last_frame, to_first_frame, gap_seconds, distance_heights, confidence, status) VALUES ('chk-analysis-b', 5, 6, 10, 20, 0.4, 0.1, 0.9, 'MAYBE')$q$,
+        $q$INSERT INTO track_links (analysis_id, from_track, to_track, from_last_frame, to_first_frame, gap_seconds, distance_heights, confidence, status) VALUES ('chk-analysis-b', 5, 6, 10, 20, 0.4, 0.1, 0.9, 'ACCEPTED')$q$,
+        $q$INSERT INTO track_links (analysis_id, from_track, to_track, from_last_frame, to_first_frame, gap_seconds, distance_heights, confidence, decided_at) VALUES ('chk-analysis-b', 5, 6, 10, 20, 0.4, 0.1, 0.9, now())$q$
+    ];
+    statement text;
+    rejected int := 0;
+BEGIN
+    FOREACH statement IN ARRAY bad_rows LOOP
+        BEGIN
+            EXECUTE statement;
+            RAISE EXCEPTION 'accepted a link that breaks a rule: %', statement;
+        EXCEPTION WHEN check_violation THEN
+            rejected := rejected + 1;
+        END;
+    END LOOP;
+    ASSERT rejected = array_length(bad_rows, 1);
+
+    -- One-to-one: a track continues one track and is continued by one.
+    INSERT INTO track_links (analysis_id, from_track, to_track, from_last_frame, to_first_frame, gap_seconds,
+                             distance_heights, color_distance, same_team, confidence)
+    VALUES ('chk-analysis-b', 1, 2, 10, 18, 0.32, 0.12, 4.28, true, 0.9),
+           ('chk-analysis-b', 2, 4, 30, 40, 0.4, 0.3, NULL, NULL, 0.7);
+    BEGIN
+        INSERT INTO track_links (analysis_id, from_track, to_track, from_last_frame, to_first_frame, gap_seconds, distance_heights, confidence)
+        VALUES ('chk-analysis-b', 3, 2, 5, 18, 0.5, 0.2, 0.6);
+        RAISE EXCEPTION 'track 2 must not continue two tracks';
+    EXCEPTION WHEN unique_violation THEN
+        NULL;
+    END;
+    UPDATE track_links SET status = 'ACCEPTED', decided_at = now(), decided_by = 'chk-coach-a'
+    WHERE analysis_id = 'chk-analysis-b' AND from_track = 1;
+    RAISE NOTICE 'OK track links (% bad rows rejected, one-to-one, decision with its date)', rejected;
+END $$;
+
 ROLLBACK;
