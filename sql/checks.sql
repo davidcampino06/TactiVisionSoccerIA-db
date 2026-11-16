@@ -105,4 +105,50 @@ BEGIN
 END $$;
 RESET ROLE;
 
+-- 4. Track photos (migration 0021): one small JPEG per track, gone with its analysis.
+INSERT INTO videos (id, match_id, file_name, file_path, format, file_size)
+VALUES ('chk-video-a', 'chk-match-a', 'clip.mp4', 'uploads/clip.mp4', 'MP4', 1000);
+INSERT INTO video_analyses (id, video_id, status) VALUES ('chk-analysis-a', 'chk-video-a', 'COMPLETED');
+INSERT INTO detections (id, video_analysis_id, frame_number, timestamp, object_type, confidence,
+                        bounding_box_x, bounding_box_y, bounding_box_width, bounding_box_height, track_id)
+VALUES ('chk-det-a', 'chk-analysis-a', 0, 0, 'PLAYER', 0.9, 10, 10, 20, 40, 1);
+DO $$
+DECLARE
+    bad_rows text[] := ARRAY[
+        $q$INSERT INTO track_snapshots (analysis_id, track_id, frame_number, timestamp, confidence, width, height, image)
+           VALUES ('chk-analysis-a', 2, 0, 0, 0.9, 20, 40, ''::bytea)$q$,
+        $q$INSERT INTO track_snapshots (analysis_id, track_id, frame_number, timestamp, confidence, width, height, image)
+           VALUES ('chk-analysis-a', 3, 0, 0, 0.9, 20, 40, convert_to(repeat('x', 60001), 'UTF8'))$q$,
+        $q$INSERT INTO track_snapshots (analysis_id, track_id, frame_number, timestamp, confidence, width, height, image)
+           VALUES ('chk-analysis-a', 4, 0, 0, 1.5, 20, 40, '\xffd8ff'::bytea)$q$,
+        $q$INSERT INTO track_snapshots (analysis_id, track_id, frame_number, timestamp, confidence, width, height, image)
+           VALUES ('chk-analysis-a', 5, -1, 0, 0.9, 20, 40, '\xffd8ff'::bytea)$q$,
+        $q$INSERT INTO track_snapshots (analysis_id, track_id, frame_number, timestamp, confidence, width, height, image)
+           VALUES ('chk-analysis-a', 6, 0, 0, 0.9, 20, 0, '\xffd8ff'::bytea)$q$
+    ];
+    statement text;
+    rejected int := 0;
+BEGIN
+    FOREACH statement IN ARRAY bad_rows LOOP
+        BEGIN
+            EXECUTE statement;
+            RAISE EXCEPTION 'accepted a track photo that breaks a rule: %', statement;
+        EXCEPTION WHEN check_violation THEN
+            rejected := rejected + 1;
+        END;
+    END LOOP;
+    ASSERT rejected = array_length(bad_rows, 1);
+
+    INSERT INTO track_snapshots (analysis_id, track_id, frame_number, timestamp, confidence, width, height, image)
+    VALUES ('chk-analysis-a', 1, 0, 0, 0.9, 20, 40, '\xffd8ff'::bytea);
+    BEGIN
+        INSERT INTO track_snapshots (analysis_id, track_id, frame_number, timestamp, confidence, width, height, image)
+        VALUES ('chk-analysis-a', 1, 5, 0.2, 0.8, 20, 40, '\xffd8ff'::bytea);
+        RAISE EXCEPTION 'a track must have one photo only';
+    EXCEPTION WHEN unique_violation THEN
+        NULL;
+    END;
+    RAISE NOTICE 'OK track photos (% bad rows rejected, one photo per track)', rejected;
+END $$;
+
 ROLLBACK;
