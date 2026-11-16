@@ -4,7 +4,8 @@
 #     ADMIN_URL=postgresql://postgres:postgres@localhost:5432/postgres bash scripts/ci_local.sh
 #
 # It creates (and drops first) two scratch databases, tactivision_ci and tactivision_restore, on the
-# server of ADMIN_URL: never point it at Neon or any database with real data. Needs psql, Python and
+# server of ADMIN_URL, and drops them again when everything passes: never point it at Neon or any
+# database with real data. Needs psql, Python and
 # psycopg2. Stops at the first step that fails, like the CI. ("cmd; echo OK" and not "cmd && echo OK":
 # bash does not stop on a failure in the left side of &&, even with set -e.)
 set -euo pipefail
@@ -67,5 +68,11 @@ done; echo OK
 step "10. Quitar los datos de demostración"
 psql -q -v ON_ERROR_STOP=1 "$DATABASE_URL" -f sql/seed_demo_remove.sql > /dev/null
 test "$(psql -At "$DATABASE_URL" -c "SELECT (SELECT count(*) FROM teams WHERE id = 'demo-team') + (SELECT count(*) FROM players WHERE id LIKE 'demo-%') + (SELECT count(*) FROM users WHERE id LIKE 'demo-%')")" = 0; echo OK
+
+# Everything passed: the scratch databases are not needed any more (after a failure they are kept, to
+# look at what went wrong). KEEP_DATABASES=1 keeps them anyway.
+if [ "${KEEP_DATABASES:-0}" != "1" ]; then
+    psql -q "$ADMIN_URL" -c "DROP DATABASE IF EXISTS tactivision_restore" -c "DROP DATABASE IF EXISTS tactivision_ci"
+fi
 
 printf '\nTodo pasó: es lo mismo que revisa GitHub Actions.\n'
