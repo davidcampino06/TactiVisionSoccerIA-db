@@ -68,6 +68,16 @@ WHERE n.nspname = 'public' AND p.prokind = 'f'
   AND NOT EXISTS (SELECT 1 FROM pg_depend d WHERE d.objid = p.oid AND d.deptype = 'e')
 ORDER BY p.proname
 """
+# Triggers written by the project (not the internal ones of foreign keys), with their arguments:
+# the audit trigger receives the key columns that name a row (migration 0031).
+TRIGGERS = """
+SELECT cl.relname, t.tgname, pg_get_triggerdef(t.oid)
+FROM pg_trigger t
+JOIN pg_class cl ON cl.oid = t.tgrelid
+JOIN pg_namespace n ON n.oid = cl.relnamespace
+WHERE n.nspname = 'public' AND NOT t.tgisinternal
+ORDER BY cl.relname, t.tgname
+"""
 INDEXES = """
 SELECT tablename, indexname, indexdef FROM pg_indexes WHERE schemaname = 'public' ORDER BY tablename, indexname
 """
@@ -94,6 +104,9 @@ def build(url: str) -> str:
         for table, *rest in fetch(cursor, POLICIES):
             policies[table].append(rest)
         rls_enabled = {row[0] for row in fetch(cursor, RLS_ENABLED)}
+        triggers = defaultdict(list)
+        for table, name, definition in fetch(cursor, TRIGGERS):
+            triggers[table].append((name, definition))
         functions = fetch(cursor, FUNCTIONS)
 
     real_tables = [(name, text) for name, text, kind in tables if kind == "r" and name not in SKIP]
@@ -138,6 +151,10 @@ def build(url: str) -> str:
                  if not name.endswith("_pkey") and "UNIQUE" not in definition]
         if extra:
             out += ["", "**Índices**", "", *extra]
+        if triggers[table]:
+            out += ["", "**Disparadores**", ""]
+            out += [f"- `{name}`: `{definition.split(' ON ')[0].split(name, 1)[-1].strip()}` → "
+                    f"`{definition.split('EXECUTE FUNCTION ')[-1]}`" for name, definition in triggers[table]]
         if table in rls_enabled:
             # Row-Level Security (migration 0002 and later): who can see or change each row.
             out += ["", "**Seguridad por filas (RLS)**", ""]
