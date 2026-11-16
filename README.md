@@ -66,6 +66,7 @@ una sola vez, en orden, y queda registrada en la tabla `schema_migrations`.
 | `0022_team_action_types.sql` | Tipos de acción escritos por el equipo (`team_action_types`, únicos por equipo, con RLS) y límites de las jugadas nuevas: nombre de 50 caracteres y descripción de 100 |
 | `0023_track_labels.sql` | Trayectorias que una persona marca como árbitro u otra persona externa (`track_labels`, con RLS por análisis); quedan fuera de la identificación y del ranking |
 | `0024_detection_shirt_number.sql` | El dorsal escrito para una trayectoria (`detections.player_number`) debe estar entre 0 y 99, igual que en la API (NOT VALID: no revisa filas anteriores) |
+| `0025_play_and_formation_rules.sql` | Reglas que ya aplicaba la API, ahora también en la base: tipo de acción de una jugada de hasta 40 caracteres, y formaciones numéricas de 2 a 5 líneas de 1 a 6 jugadores que suman 10 (función `formation_name_is_valid`; NOT VALID) |
 
 Base nueva: primero `sql/schema.sql` y luego las migraciones.
 
