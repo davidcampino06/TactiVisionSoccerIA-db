@@ -189,4 +189,46 @@ BEGIN
     RAISE NOTICE 'OK action types and play texts (% bad rows rejected, unique per team)', rejected;
 END $$;
 
+-- 6. Tracks marked as referee or outsider (migration 0023), and the privacy of the new tables.
+DO $$
+BEGIN
+    BEGIN
+        INSERT INTO track_labels (analysis_id, track_id, role) VALUES ('chk-analysis-a', 1, 'COACH');
+        RAISE EXCEPTION 'a track can only be marked as REFEREE or OTHER';
+    EXCEPTION WHEN check_violation THEN
+        NULL;
+    END;
+    INSERT INTO track_labels (analysis_id, track_id, role) VALUES ('chk-analysis-a', 1, 'REFEREE');
+    RAISE NOTICE 'OK track labels';
+END $$;
+
+SET LOCAL ROLE tactivision_app;
+SELECT set_config('app.current_user_id', 'chk-coach-b', true),
+       set_config('app.current_role', 'COACH', true),
+       set_config('app.current_team_id', 'chk-team-b', true);
+DO $$
+BEGIN
+    ASSERT (SELECT count(*) FROM track_snapshots) = 0, 'team B must not see the track photos of team A';
+    ASSERT (SELECT count(*) FROM track_labels) = 0, 'team B must not see the track labels of team A';
+    ASSERT (SELECT array_agg(id) FROM team_action_types) = ARRAY['chk-type-b']::varchar[],
+        'team B must only see its own action types';
+    BEGIN
+        INSERT INTO track_labels (analysis_id, track_id, role) VALUES ('chk-analysis-a', 9, 'OTHER');
+        RAISE EXCEPTION 'team B must not mark tracks of team A';
+    EXCEPTION WHEN insufficient_privilege THEN
+        NULL;
+    END;
+    RAISE NOTICE 'OK row-level security of track photos, track labels and action types';
+END $$;
+RESET ROLE;
+
+-- Deleting the analysis takes its photos and labels with it.
+DO $$
+BEGIN
+    DELETE FROM video_analyses WHERE id = 'chk-analysis-a';
+    ASSERT (SELECT count(*) FROM track_snapshots WHERE analysis_id = 'chk-analysis-a') = 0, 'photos must go with the analysis';
+    ASSERT (SELECT count(*) FROM track_labels WHERE analysis_id = 'chk-analysis-a') = 0, 'labels must go with the analysis';
+    RAISE NOTICE 'OK photos and labels are deleted with their analysis';
+END $$;
+
 ROLLBACK;
