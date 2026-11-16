@@ -75,6 +75,34 @@ DATABASE_URL="postgresql://USER:PASSWORD@HOST/DB?sslmode=require" python scripts
 python scripts/apply_migrations.py --list   # ver aplicadas y pendientes
 ```
 
+### Desde Windows (PowerShell, sin `psql`)
+
+El script solo necesita Python y `psycopg2`, así que sirve en Windows aunque no esté instalado `psql`.
+Un comando a la vez:
+
+```powershell
+cd C:\ruta\a\TactiSoccerIA-db
+git fetch origin
+git reset origin/main
+git status                      # si muestra archivos borrados (D) o modificados (M), recupéralos:
+git restore <archivo> ...       # trae la versión de GitHub de cada uno
+$env:DATABASE_URL = Read-Host "URL de Neon"
+```
+
+En `Read-Host` lo que va entre comillas es solo la pregunta: presiona Enter y pega la URL cuando
+aparezca `URL de Neon:` (nunca la escribas dentro del comando ni la compartas). Luego:
+
+```powershell
+python scripts/apply_migrations.py --list   # debe mostrar como PENDING solo las migraciones nuevas
+python scripts/apply_migrations.py          # las aplica en orden; termina en "Done."
+```
+
+`git reset origin/main` mueve la rama pero no cambia los archivos de la carpeta: por eso hay que
+revisar `git status` y recuperar con `git restore` lo que quede viejo antes de aplicar.
+
+Si hay migraciones nuevas, aplícalas en Neon **antes** de desplegar el backend que las usa: el backend
+nuevo falla si busca tablas o reglas que la base todavía no tiene.
+
 ## Row-Level Security (aislamiento entre equipos)
 
 Es la segunda barrera de seguridad (la primera es la API). Aunque el backend tuviera un error y
@@ -161,8 +189,8 @@ quitarlos (o cambiar esas contraseñas) después de la presentación.
 | Archivo | Qué hace | Modifica datos |
 |---|---|---|
 | `sql/verify_rls.sql` | Demostración de Row-Level Security | No |
-| `sql/checks.sql` | Prueba con `ASSERT` la auditoría, que se rechacen 8 filas inválidas, las vistas y RLS a través de ellas | No (termina en `ROLLBACK`) |
-| `sql/verify_data.sql` | Reporte de salud: reglas sin validar, análisis atascados, videos sin análisis, dorsales repetidos, cuentas sin equipo, tamaño de cada equipo | No (solo lectura) |
+| `sql/checks.sql` | Prueba con `ASSERT` la auditoría, que se rechacen 8 filas inválidas, las vistas y RLS a través de ellas; las fotos de trayectorias, los tipos de acción, las marcas de árbitro/externo y los dorsales 0-99 (migraciones 0021 a 0024), con su RLS y su borrado junto al análisis | No (termina en `ROLLBACK`) |
+| `sql/verify_data.sql` | Reporte de salud: reglas sin validar, análisis atascados, videos sin análisis, dorsales repetidos, cuentas sin equipo, fotos sin trayectoria, árbitros con jugador asignado, trayectorias identificadas a medias, tamaño de cada equipo | No (solo lectura) |
 
 ## Respaldo y restauración
 
