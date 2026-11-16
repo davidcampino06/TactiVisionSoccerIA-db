@@ -454,4 +454,34 @@ BEGIN
     RAISE NOTICE 'OK links and role suggestions are deleted with their analysis';
 END $$;
 
+-- 13. A track number is never negative (migration 0033), in every table that names a track.
+DO $$
+DECLARE
+    bad_rows text[] := ARRAY[
+        $q$INSERT INTO detections (id, video_analysis_id, frame_number, timestamp, object_type, confidence, bounding_box_x, bounding_box_y, bounding_box_width, bounding_box_height, track_id) VALUES ('chk-neg', 'chk-analysis-c', 0, 0, 'PLAYER', 0.9, 1, 1, 20, 40, -1)$q$,
+        $q$INSERT INTO track_snapshots (analysis_id, track_id, frame_number, timestamp, confidence, width, height, image) VALUES ('chk-analysis-c', -1, 0, 0, 0.9, 20, 40, '\xffd8ff'::bytea)$q$,
+        $q$INSERT INTO track_labels (analysis_id, track_id, role) VALUES ('chk-analysis-c', -1, 'OTHER')$q$,
+        $q$INSERT INTO track_links (analysis_id, from_track, to_track, from_last_frame, to_first_frame, gap_seconds, distance_heights, confidence) VALUES ('chk-analysis-c', -1, 2, 1, 5, 0.2, 0.1, 0.8)$q$,
+        $q$INSERT INTO track_role_suggestions (analysis_id, track_id, suggestion, kit_group, kit_color, kit_tracks, confidence, reason) VALUES ('chk-analysis-c', -1, 'REFEREE', 1, '#3bb3c2', 1, 0.5, 'x')$q$
+    ];
+    statement text;
+    rejected int := 0;
+BEGIN
+    INSERT INTO video_analyses (id, video_id, status) VALUES ('chk-analysis-c', 'chk-video-a', 'COMPLETED');
+    FOREACH statement IN ARRAY bad_rows LOOP
+        BEGIN
+            EXECUTE statement;
+            RAISE EXCEPTION 'accepted a negative track number: %', statement;
+        EXCEPTION WHEN check_violation THEN
+            rejected := rejected + 1;
+        END;
+    END LOOP;
+    ASSERT rejected = array_length(bad_rows, 1);
+    -- A detection the tracker did not follow has no number, and that is fine.
+    INSERT INTO detections (id, video_analysis_id, frame_number, timestamp, object_type, confidence, bounding_box_x,
+                            bounding_box_y, bounding_box_width, bounding_box_height, track_id)
+    VALUES ('chk-untracked', 'chk-analysis-c', 0, 0, 'PLAYER', 0.6, 1, 1, 20, 40, NULL);
+    RAISE NOTICE 'OK track numbers (% negative ones rejected in 5 tables)', rejected;
+END $$;
+
 ROLLBACK;
