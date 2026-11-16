@@ -7,7 +7,8 @@
 #   6. the rule checks (sql/checks.sql): audit log, rejected rows, views
 #   7. docs/DICCIONARIO_DE_DATOS.md matches the schema (regenerated and compared)
 #   8. the demo data loads twice without duplicates, and the health report runs on it
-#   9. a backup restored into a second empty database gives back the same data (also a binary track photo)
+#   9. a backup restored into a second empty database gives back the same data (also a binary track
+#      photo, a decided track link and a role suggestion)
 #  10. removing the demo data leaves no demo rows
 name: CI
 
@@ -104,14 +105,16 @@ jobs:
         env:
           RESTORE_URL: postgresql://postgres:postgres@localhost:5432/tactivision_restore
         run: |
-          # A track photo (binary data, migration 0021) goes through the backup too.
+          # A track photo (binary data, migration 0021) goes through the backup too, and an accepted
+          # link with who decided it and a referee suggestion (migrations 0029 and 0030).
           psql -v ON_ERROR_STOP=1 "$DATABASE_URL" -c "INSERT INTO track_snapshots (analysis_id, track_id, frame_number, timestamp, confidence, width, height, image) SELECT id, 1, 0, 0, 0.9, 20, 40, decode('ffd8ffe000104a4649460001', 'hex') FROM video_analyses WHERE id = 'demo-analysis-5'"
+          psql -v ON_ERROR_STOP=1 "$DATABASE_URL" -c "INSERT INTO track_links (analysis_id, from_track, to_track, from_last_frame, to_first_frame, gap_seconds, distance_heights, color_distance, same_team, confidence, status, decided_by, decided_at) SELECT a.id, 1, 2, 10, 18, 0.32, 0.12, 4.28, true, 0.9, 'ACCEPTED', t.coach_id, now() FROM video_analyses a, teams t WHERE a.id = 'demo-analysis-5' AND t.id = 'demo-team'; INSERT INTO track_role_suggestions (analysis_id, track_id, suggestion, kit_group, kit_color, kit_tracks, confidence, reason) VALUES ('demo-analysis-5', 3, 'GOALKEEPER_OR_REFEREE', 1, '#3bb3c2', 1, 0.5, 'Camiseta #3bb3c2, de ningún equipo')"
           python scripts/backup_database.py --output backups/ci
           psql -v ON_ERROR_STOP=1 "$DATABASE_URL" -c "CREATE DATABASE tactivision_restore"
           psql -q -v ON_ERROR_STOP=1 "$RESTORE_URL" -f sql/schema.sql
           DATABASE_URL="$RESTORE_URL" python scripts/apply_migrations.py
           DATABASE_URL="$RESTORE_URL" python scripts/backup_database.py --restore backups/ci --yes
-          for table in users teams players matches videos video_analyses detections tactical_indicators track_snapshots audit_log; do
+          for table in users teams players matches videos video_analyses detections tactical_indicators track_snapshots track_links track_role_suggestions audit_log; do
             query="SELECT md5(coalesce(string_agg(t::text, '|' ORDER BY t::text), '')) FROM $table t"
             test "$(psql -At "$DATABASE_URL" -c "$query")" = "$(psql -At "$RESTORE_URL" -c "$query")" \
               || (echo "$table differs after the restore" && exit 1)
