@@ -67,6 +67,7 @@ una sola vez, en orden, y queda registrada en la tabla `schema_migrations`.
 | `0023_track_labels.sql` | Trayectorias que una persona marca como árbitro u otra persona externa (`track_labels`, con RLS por análisis); quedan fuera de la identificación y del ranking |
 | `0024_detection_shirt_number.sql` | El dorsal escrito para una trayectoria (`detections.player_number`) debe estar entre 0 y 99, igual que en la API (NOT VALID: no revisa filas anteriores) |
 | `0025_play_and_formation_rules.sql` | Reglas que ya aplicaba la API, ahora también en la base: tipo de acción de una jugada de hasta 40 caracteres, y formaciones numéricas de 2 a 5 líneas de 1 a 6 jugadores que suman 10 (función `formation_name_is_valid`; NOT VALID) |
+| `0026_identification_views.sql` | Vistas de reporte `v_identification_progress` (por clip: trayectorias, con foto, con jugador, solo dorsal, árbitros, externos, pendientes) y `v_action_type_usage` (tipos de acción y cuántas jugadas los usan), con `security_invoker` para que RLS siga aplicando |
 
 Base nueva: primero `sql/schema.sql` y luego las migraciones.
 
