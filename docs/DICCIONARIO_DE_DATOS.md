@@ -3,7 +3,7 @@
 > Generado con `scripts/data_dictionary.py` a partir de la base de datos (esquema + migraciones).
 > No se edita a mano: si cambia el esquema, se vuelve a generar.
 
-26 tablas y 4 vistas.
+27 tablas y 4 vistas.
 
 ## Diagrama entidad-relación
 
@@ -117,6 +117,11 @@ erDiagram
         varchar coach_id FK
         varchar name
     }
+    track_labels {
+        varchar analysis_id FK
+        varchar role
+        varchar labelled_by FK
+    }
     track_snapshots {
         varchar analysis_id FK
     }
@@ -168,6 +173,8 @@ erDiagram
     teams ||--o{ team_action_types : "team_id"
     teams ||--o{ team_crests : "team_id"
     users ||--o{ teams : "coach_id"
+    video_analyses ||--o{ track_labels : "analysis_id"
+    users |o--o{ track_labels : "labelled_by"
     video_analyses ||--o{ track_snapshots : "analysis_id"
     teams |o--o{ users : "team_id"
     videos ||--o{ video_analyses : "video_id"
@@ -719,6 +726,25 @@ Equipos; cada entrenador tiene uno.
 - Clave primaria: `PRIMARY KEY (id)`
 - Único: `UNIQUE (coach_id)`
 - Único: `UNIQUE (invitation_code)`
+
+### `track_labels`
+
+Trayectorias que una persona marcó como árbitro o persona externa (no son jugadores).
+
+| Columna | Tipo | Nulo | Por defecto | Descripción |
+|---|---|---|---|---|
+| `analysis_id` | varchar(36) | no |  | Análisis al que pertenece; se borra con él. |
+| `track_id` | integer | no |  | Número de la trayectoria dentro del video (el mismo de detections.track_id). |
+| `role` | varchar(10) | no |  | REFEREE (árbitro o juez de línea) u OTHER (persona externa al juego). |
+| `labelled_by` | varchar(36) | sí |  | Quién la marcó. |
+| `labelled_at` | timestamp | no | CURRENT_TIMESTAMP | Cuándo la marcó. |
+
+**Reglas**
+
+- Regla: `CHECK (((role)::text = ANY ((ARRAY['REFEREE'::character varying, 'OTHER'::character varying])::text[])))`
+- Clave foránea → `video_analyses`: `FOREIGN KEY (analysis_id) REFERENCES video_analyses(id) ON DELETE CASCADE`
+- Clave foránea → `users`: `FOREIGN KEY (labelled_by) REFERENCES users(id) ON DELETE SET NULL`
+- Clave primaria: `PRIMARY KEY (analysis_id, track_id)`
 
 ### `track_snapshots`
 
