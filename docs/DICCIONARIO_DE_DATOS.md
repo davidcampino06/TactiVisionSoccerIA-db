@@ -3,7 +3,7 @@
 > Generado con `scripts/data_dictionary.py` a partir de la base de datos (esquema + migraciones).
 > No se edita a mano: si cambia el esquema, se vuelve a generar.
 
-24 tablas y 4 vistas.
+26 tablas y 4 vistas.
 
 ## Diagrama entidad-relación
 
@@ -103,6 +103,12 @@ erDiagram
         varchar team_id FK
         varchar name
     }
+    team_action_types {
+        varchar id PK
+        varchar team_id FK
+        varchar name
+        varchar created_by FK
+    }
     team_crests {
         varchar team_id PK
     }
@@ -110,6 +116,9 @@ erDiagram
         varchar id PK
         varchar coach_id FK
         varchar name
+    }
+    track_snapshots {
+        varchar analysis_id FK
     }
     users {
         varchar id PK
@@ -155,8 +164,11 @@ erDiagram
     users |o--o{ tactical_play_versions : "created_by"
     tactical_plays ||--o{ tactical_play_versions : "tactical_play_id"
     teams ||--o{ tactical_plays : "team_id"
+    users |o--o{ team_action_types : "created_by"
+    teams ||--o{ team_action_types : "team_id"
     teams ||--o{ team_crests : "team_id"
     users ||--o{ teams : "coach_id"
+    video_analyses ||--o{ track_snapshots : "analysis_id"
     teams |o--o{ users : "team_id"
     videos ||--o{ video_analyses : "video_id"
     matches ||--o{ videos : "match_id"
@@ -641,6 +653,27 @@ Jugadas diseñadas en el editor táctico.
 
 **Reglas**
 
+- Regla: `CHECK (((description IS NULL) OR (char_length((description)::text) <= 100))) NOT VALID` *(NOT VALID: solo filas nuevas)*
+- Regla: `CHECK ((char_length((name)::text) <= 50)) NOT VALID` *(NOT VALID: solo filas nuevas)*
+- Clave foránea → `teams`: `FOREIGN KEY (team_id) REFERENCES teams(id) ON DELETE CASCADE`
+- Clave primaria: `PRIMARY KEY (id)`
+
+### `team_action_types`
+
+Tipos de acción escritos por el equipo para sus jugadas, además de los fijos del editor.
+
+| Columna | Tipo | Nulo | Por defecto | Descripción |
+|---|---|---|---|---|
+| `id` | varchar(36) | no |  | Identificador (UUID). |
+| `team_id` | varchar(36) | no |  | Equipo dueño del tipo. |
+| `name` | varchar(40) | no |  | Nombre del tipo de acción (2 a 40 caracteres), único por equipo sin distinguir mayúsculas. |
+| `created_by` | varchar(36) | sí |  | Quién lo escribió. |
+| `created_at` | timestamp | no | CURRENT_TIMESTAMP | Cuándo se creó. |
+
+**Reglas**
+
+- Regla: `CHECK ((((char_length(btrim((name)::text)) >= 2) AND (char_length(btrim((name)::text)) <= 40)) AND ((name)::text = btrim((name)::text))))`
+- Clave foránea → `users`: `FOREIGN KEY (created_by) REFERENCES users(id) ON DELETE SET NULL`
 - Clave foránea → `teams`: `FOREIGN KEY (team_id) REFERENCES teams(id) ON DELETE CASCADE`
 - Clave primaria: `PRIMARY KEY (id)`
 
@@ -686,6 +719,33 @@ Equipos; cada entrenador tiene uno.
 - Clave primaria: `PRIMARY KEY (id)`
 - Único: `UNIQUE (coach_id)`
 - Único: `UNIQUE (invitation_code)`
+
+### `track_snapshots`
+
+Foto de cada trayectoria detectada (el mejor recorte del video) para que el cuerpo técnico reconozca al jugador y lo vincule a la plantilla.
+
+| Columna | Tipo | Nulo | Por defecto | Descripción |
+|---|---|---|---|---|
+| `analysis_id` | varchar(36) | no |  | Análisis al que pertenece; se borra con él. |
+| `track_id` | integer | no |  | Número de la trayectoria dentro del video (el mismo de detections.track_id). |
+| `frame_number` | integer | no |  | Cuadro del video del que sale la foto. |
+| `timestamp` | numeric(10,4) | no |  | Segundo del video del que sale la foto. |
+| `confidence` | numeric(10,4) | no |  | Confianza de la detección de ese cuadro (0 a 1). |
+| `width` | integer | no |  | Ancho de la foto en píxeles. |
+| `height` | integer | no |  | Alto de la foto en píxeles (máximo 160). |
+| `image` | bytea | no |  | Foto en JPEG (unos pocos KB, máximo 60 000 bytes). |
+| `created_at` | timestamp | no | CURRENT_TIMESTAMP | Cuándo se guardó. |
+
+**Reglas**
+
+- Regla: `CHECK (((confidence >= (0)::numeric) AND (confidence <= (1)::numeric)))`
+- Regla: `CHECK ((frame_number >= 0))`
+- Regla: `CHECK ((height > 0))`
+- Regla: `CHECK (((octet_length(image) >= 1) AND (octet_length(image) <= 60000)))`
+- Regla: `CHECK (("timestamp" >= (0)::numeric))`
+- Regla: `CHECK ((width > 0))`
+- Clave foránea → `video_analyses`: `FOREIGN KEY (analysis_id) REFERENCES video_analyses(id) ON DELETE CASCADE`
+- Clave primaria: `PRIMARY KEY (analysis_id, track_id)`
 
 ### `users`
 
