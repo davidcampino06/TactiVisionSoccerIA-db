@@ -74,6 +74,7 @@ una sola vez, en orden, y queda registrada en la tabla `schema_migrations`.
 | `0030_track_role_suggestions.sql` | Trayectorias con camiseta de ningún equipo agrupadas por color (`track_role_suggestions`): posible árbitro o arquero, con el motivo en palabras; una persona puede descartarlas; RLS por análisis |
 | `0031_audit_track_decisions.sql` | La auditoría nombra la fila por sus columnas clave (`análisis/trayectoria`, `row_id` de 80 caracteres) y registra las marcas de árbitro, las decisiones sobre enlaces y las sugerencias descartadas |
 | `0032_track_identity_views.sql` | Vistas `v_track_identities` (cada trayectoria de una cadena de enlaces aceptados con la primera de su cadena: el mismo jugador) y `v_track_link_review` (por clip: enlaces por decidir, aceptados, rechazados y sugerencias abiertas), con `security_invoker` |
+| `0033_track_number_rules.sql` | El número de trayectoria nunca es negativo en `detections`, `track_snapshots` y `track_labels`, igual que en las tablas nuevas (NOT VALID: no revisa filas anteriores) |
 
 Base nueva: primero `sql/schema.sql` y luego las migraciones.
 
