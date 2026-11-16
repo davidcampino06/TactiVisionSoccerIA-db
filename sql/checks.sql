@@ -378,4 +378,25 @@ BEGIN
     RAISE NOTICE 'OK role suggestions (% bad rows rejected)', rejected;
 END $$;
 
+-- 11. Audit of the track decisions, named by analysis/track (migration 0031).
+DO $$
+DECLARE
+    fields jsonb;
+BEGIN
+    ASSERT (SELECT count(*) FROM audit_log WHERE table_name = 'track_labels' AND row_id = 'chk-analysis-b/3'
+            AND action = 'INSERT') = 1, 'marking the referee must be audited with analysis/track';
+    SELECT changed_fields INTO fields FROM audit_log
+    WHERE table_name = 'track_links' AND row_id = 'chk-analysis-b/1' AND action = 'UPDATE';
+    ASSERT fields -> 'status' ->> 'old' = 'SUGGESTED' AND fields -> 'status' ->> 'new' = 'ACCEPTED',
+        format('accepting a link must be audited: %s', fields);
+    ASSERT fields -> 'decided_by' ->> 'new' = 'chk-coach-a', 'and who accepted it';
+    -- The suggestions written by the analysis are not audited; dismissing one is.
+    ASSERT (SELECT count(*) FROM audit_log WHERE table_name = 'track_role_suggestions') = 1,
+        'only the dismissed suggestion must be audited';
+    ASSERT (SELECT row_id FROM audit_log WHERE table_name = 'track_role_suggestions') = 'chk-analysis-b/6';
+    -- Tables with an id are still named by it.
+    ASSERT (SELECT count(*) FROM audit_log WHERE table_name = 'users' AND row_id = 'chk-coach-a') >= 1;
+    RAISE NOTICE 'OK audit of track labels, link decisions and dismissed suggestions';
+END $$;
+
 ROLLBACK;
