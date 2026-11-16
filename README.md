@@ -78,6 +78,7 @@ una sola vez, en orden, y queda registrada en la tabla `schema_migrations`.
 | `0031_audit_track_decisions.sql` | La auditoría nombra la fila por sus columnas clave (`análisis/trayectoria`, `row_id` de 80 caracteres) y registra las marcas de árbitro, las decisiones sobre enlaces y las sugerencias descartadas |
 | `0032_track_identity_views.sql` | Vistas `v_track_identities` (cada trayectoria de una cadena de enlaces aceptados con la primera de su cadena: el mismo jugador) y `v_track_link_review` (por clip: enlaces por decidir, aceptados, rechazados y sugerencias abiertas), con `security_invoker` |
 | `0033_track_number_rules.sql` | El número de trayectoria nunca es negativo en `detections`, `track_snapshots` y `track_labels`, igual que en las tablas nuevas (NOT VALID: no revisa filas anteriores) |
+| `0034_track_identities_function.sql` | Función `track_identities_of(análisis)`: las cadenas de enlaces aceptados de un solo clip usando los índices (la vista recorre los enlaces de todos los clips); `SECURITY INVOKER`, así que RLS sigue aplicando |
 
 Base nueva: primero `sql/schema.sql` y luego las migraciones.
 
@@ -118,6 +119,36 @@ una migración nueva; `--accept-changes` solo para cambios inofensivos (un comen
 
 Si hay migraciones nuevas, aplícalas en Neon **antes** de desplegar el backend que las usa: el backend
 nuevo falla si busca tablas o reglas que la base todavía no tiene.
+
+## Identificación de jugadores en los clips (migraciones 0021 a 0034)
+
+Cada persona que sigue el tracker es una trayectoria (`detections.track_id`). Una persona dice quién
+es: un jugador de la plantilla o un dorsal (en sus `detections`), o la marca como árbitro o externa
+(`track_labels`). La IA ayuda con tres cosas, y ninguna decide sola:
+
+| Ayuda | Tabla | Qué decide la persona |
+|---|---|---|
+| La foto más clara de cada trayectoria | `track_snapshots` | Reconoce al jugador |
+| Dos trayectorias que parecen el mismo jugador cortado por una oclusión | `track_links` | Acepta o rechaza el enlace; aceptado, el dorsal vale para las dos |
+| Camisetas de ningún equipo agrupadas por color | `track_role_suggestions` | Marca al árbitro o pone el dorsal del arquero, o descarta la sugerencia |
+
+`v_track_identities` (todas las cadenas) y `track_identities_of(análisis)` (las de un clip) dicen qué
+trayectorias son la misma persona; `v_track_link_review` cuánto falta revisar en cada clip. Las
+decisiones quedan en la auditoría. Consultas listas para el SQL Editor de Neon:
+`sql/identification_queries.sql` (solo lectura).
+
+Tiempos medidos con `scripts/benchmark_identification.py` (PostgreSQL 16 local, todo se deshace al
+final; 100 trayectorias por clip, ~5 000 detecciones por clip):
+
+| Consulta de un clip | 30 clips (154 500 detecciones) | 300 clips (1 545 000 detecciones) |
+|---|---|---|
+| Trayectorias del clip (`GET /analyses/{id}/tracks`) | 2.2 ms | 1.9 ms |
+| Cajas de un segundo (video con recuadros) | 0.2 ms | 0.2 ms |
+| `v_track_identities` filtrada por el clip | 2.2 ms | 9.9 ms |
+| `track_identities_of(clip)` | 0.1 ms | 0.3 ms |
+| `v_track_link_review` del clip | 0.2 ms | 0.2 ms |
+
+La vista recursiva crece con todos los clips de todos los equipos; por eso la app usa la función.
 
 ## Row-Level Security (aislamiento entre equipos)
 
