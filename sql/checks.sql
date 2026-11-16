@@ -501,4 +501,34 @@ BEGIN
     RAISE NOTICE 'OK a loop of links gives no chain and does not hang the view';
 END $$;
 
+-- 15. track_identities_of (migration 0034) gives for one clip exactly what the view gives, and
+--     keeps Row-Level Security.
+DO $$
+BEGIN
+    INSERT INTO track_links (analysis_id, from_track, to_track, from_last_frame, to_first_frame, gap_seconds,
+                             distance_heights, confidence, status, decided_at)
+    VALUES ('chk-analysis-d', 6, 9, 30, 40, 0.4, 0.1, 0.9, 'ACCEPTED', now()),
+           ('chk-analysis-d', 9, 12, 50, 60, 0.4, 0.1, 0.9, 'SUGGESTED', NULL);
+    ASSERT (SELECT array_agg(ARRAY[track_id, person_track, step]) FROM track_identities_of('chk-analysis-d'))
+         = (SELECT array_agg(ARRAY[track_id, person_track, step] ORDER BY person_track, step)
+            FROM v_track_identities WHERE analysis_id = 'chk-analysis-d'),
+        'the function and the view must give the same chains';
+    ASSERT (SELECT array_agg(track_id) FROM track_identities_of('chk-analysis-d')) = ARRAY[5, 6, 9],
+        'chain 5 -> 6 -> 9, without the suggested link nor the loop';
+    ASSERT NOT EXISTS (SELECT 1 FROM track_identities_of('no-such-analysis')), 'an unknown clip has no chains';
+    RAISE NOTICE 'OK track_identities_of gives the chains of one clip';
+END $$;
+
+SET LOCAL ROLE tactivision_app;
+SELECT set_config('app.current_user_id', 'chk-coach-b', true),
+       set_config('app.current_role', 'COACH', true),
+       set_config('app.current_team_id', 'chk-team-b', true);
+DO $$
+BEGIN
+    ASSERT NOT EXISTS (SELECT 1 FROM track_identities_of('chk-analysis-d')),
+        'team B must not get the chains of a clip of team A through the function';
+    RAISE NOTICE 'OK row-level security through track_identities_of';
+END $$;
+RESET ROLE;
+
 ROLLBACK;
