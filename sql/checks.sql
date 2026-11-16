@@ -261,4 +261,46 @@ BEGIN
     RAISE NOTICE 'OK action type length and custom formations (% bad rows rejected)', rejected;
 END $$;
 
+-- 8. Report views of the identification and of the action types (migration 0026).
+INSERT INTO video_analyses (id, video_id, status) VALUES ('chk-analysis-b', 'chk-video-a', 'COMPLETED');
+INSERT INTO detections (id, video_analysis_id, frame_number, timestamp, object_type, confidence, bounding_box_x,
+                        bounding_box_y, bounding_box_width, bounding_box_height, track_id, player_id, player_number)
+VALUES ('chk-d1', 'chk-analysis-b', 0, 0, 'PLAYER', 0.9, 1, 1, 20, 40, 1, 'chk-player', 9),   -- a squad player
+       ('chk-d2', 'chk-analysis-b', 1, 0.1, 'PLAYER', 0.9, 1, 1, 20, 40, 1, 'chk-player', 9),
+       ('chk-d3', 'chk-analysis-b', 0, 0, 'PLAYER', 0.9, 50, 1, 20, 40, 2, NULL, 23),         -- only a number
+       ('chk-d4', 'chk-analysis-b', 0, 0, 'PLAYER', 0.9, 90, 1, 20, 40, 3, NULL, NULL),       -- the referee
+       ('chk-d5', 'chk-analysis-b', 0, 0, 'PLAYER', 0.9, 130, 1, 20, 40, 4, NULL, NULL),      -- nobody yet
+       ('chk-d6', 'chk-analysis-b', 0, 0, 'BALL', 0.5, 10, 10, 4, 4, NULL, NULL, NULL);       -- not a track
+INSERT INTO track_labels (analysis_id, track_id, role) VALUES ('chk-analysis-b', 3, 'REFEREE');
+INSERT INTO track_snapshots (analysis_id, track_id, frame_number, timestamp, confidence, width, height, image)
+VALUES ('chk-analysis-b', 1, 0, 0, 0.9, 20, 40, '\xffd8ff'::bytea), ('chk-analysis-b', 2, 0, 0, 0.9, 20, 40, '\xffd8ff'::bytea);
+DO $$
+DECLARE
+    row record;
+BEGIN
+    SELECT * INTO row FROM v_identification_progress WHERE analysis_id = 'chk-analysis-b';
+    ASSERT (row.tracks, row.tracks_with_photo, row.with_player, row.number_only, row.referees, row.outsiders, row.pending)
+         = (4::bigint, 2::bigint, 1::bigint, 1::bigint, 1::bigint, 0::bigint, 1::bigint),
+        format('identification progress is wrong: %s', row);
+    ASSERT (SELECT plays FROM v_action_type_usage WHERE action_type_id = 'chk-type-a') = 0,
+        'no play of team A uses its action type yet';
+    UPDATE tactical_plays SET action_type = 'Saque de banda largo' WHERE id = 'chk-play-b';
+    ASSERT (SELECT plays FROM v_action_type_usage WHERE action_type_id = 'chk-type-a') = 1,
+        'the play that uses the type must be counted';
+    RAISE NOTICE 'OK identification progress and action type usage';
+END $$;
+
+SET LOCAL ROLE tactivision_app;
+SELECT set_config('app.current_user_id', 'chk-coach-b', true),
+       set_config('app.current_role', 'COACH', true),
+       set_config('app.current_team_id', 'chk-team-b', true);
+DO $$
+BEGIN
+    ASSERT (SELECT count(*) FROM v_identification_progress) = 0, 'team B must not see the clips of team A';
+    ASSERT (SELECT array_agg(action_type_id) FROM v_action_type_usage) = ARRAY['chk-type-b']::varchar[],
+        'team B must only see its own action types through the view';
+    RAISE NOTICE 'OK row-level security through the identification views';
+END $$;
+RESET ROLE;
+
 ROLLBACK;
