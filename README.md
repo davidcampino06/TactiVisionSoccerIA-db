@@ -21,7 +21,10 @@ psql "postgresql://USER:PASSWORD@HOST/DB?sslmode=require" -f sql/schema.sql
 `formations`, `match_formations`, `tactical_plays`, `tactical_play_versions`, `match_tactical_plays`,
 `videos`, `video_analyses`, `detections`, `tactical_indicators`, `ai_recommendations`,
 `recommendation_indicators`, `reports`, `notifications` y `notification_reads` (migración 0004) y
-`audit_log` (migración 0006). Cada tabla y columna está descrita en el
+`audit_log` (migración 0006). Las migraciones posteriores agregan `team_crests` (0015),
+`analysis_strengths` y `recommendation_notes` (0017, 0018), y las de identificación de jugadores en los clips:
+`track_snapshots` (0021), `team_action_types` (0022), `track_labels` (0023), `track_links` (0029) y
+`track_role_suggestions` (0030). Cada tabla y columna está descrita en el
 [diccionario de datos](docs/DICCIONARIO_DE_DATOS.md), con el diagrama entidad-relación.
 
 ## Desviaciones mínimas respecto al ERD (justificadas)
