@@ -484,4 +484,21 @@ BEGIN
     RAISE NOTICE 'OK track numbers (% negative ones rejected in 5 tables)', rejected;
 END $$;
 
+-- 14. A loop of accepted links (1 -> 2 -> 1, each row valid by itself) never hangs v_track_identities:
+--     a loop has no first track, so it gives no chain (sql/verify_data.sql lists it for a person).
+DO $$
+BEGIN
+    INSERT INTO video_analyses (id, video_id, status) VALUES ('chk-analysis-d', 'chk-video-a', 'COMPLETED');
+    INSERT INTO track_links (analysis_id, from_track, to_track, from_last_frame, to_first_frame, gap_seconds,
+                             distance_heights, confidence, status, decided_at)
+    VALUES ('chk-analysis-d', 1, 2, 10, 20, 0.4, 0.1, 0.9, 'ACCEPTED', now()),
+           ('chk-analysis-d', 2, 1, 30, 40, 0.4, 0.1, 0.9, 'ACCEPTED', now()),
+           ('chk-analysis-d', 5, 6, 10, 20, 0.4, 0.1, 0.9, 'ACCEPTED', now());
+    SET LOCAL statement_timeout = '5s';
+    ASSERT (SELECT array_agg(track_id ORDER BY track_id) FROM v_track_identities WHERE analysis_id = 'chk-analysis-d')
+         = ARRAY[5, 6], 'the loop must give no chain and the other link must still give its own';
+    RESET statement_timeout;
+    RAISE NOTICE 'OK a loop of links gives no chain and does not hang the view';
+END $$;
+
 ROLLBACK;
