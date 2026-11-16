@@ -233,4 +233,32 @@ BEGIN
     RAISE NOTICE 'OK photos and labels are deleted with their analysis';
 END $$;
 
+-- 7. Action type length and custom formations (migration 0025).
+DO $$
+DECLARE
+    bad_rows text[] := ARRAY[
+        $q$INSERT INTO tactical_plays (id, team_id, name, action_type) VALUES ('x10', 'chk-team-a', 'Jugada', repeat('t', 41))$q$,
+        $q$INSERT INTO formations (id, name) VALUES ('x11', '4-4-3')$q$,
+        $q$INSERT INTO formations (id, name) VALUES ('x12', '7-2-1')$q$,
+        $q$INSERT INTO formations (id, name) VALUES ('x13', '1-1-1-1-1-5')$q$,
+        $q$INSERT INTO formations (id, name) VALUES ('x14', '10')$q$
+    ];
+    statement text;
+    rejected int := 0;
+BEGIN
+    FOREACH statement IN ARRAY bad_rows LOOP
+        BEGIN
+            EXECUTE statement;
+            RAISE EXCEPTION 'accepted a row that breaks a rule: %', statement;
+        EXCEPTION WHEN check_violation THEN
+            rejected := rejected + 1;
+        END;
+    END LOOP;
+    ASSERT rejected = array_length(bad_rows, 1);
+    -- A valid custom system, and a name that is not a system, are accepted.
+    INSERT INTO formations (id, name) VALUES ('chk-form-1', '3-4-2-1'), ('chk-form-2', '4-1-2-1-2'), ('chk-form-3', 'Rombo');
+    INSERT INTO tactical_plays (id, team_id, name, action_type) VALUES ('chk-play-b', 'chk-team-a', 'Jugada', repeat('t', 40));
+    RAISE NOTICE 'OK action type length and custom formations (% bad rows rejected)', rejected;
+END $$;
+
 ROLLBACK;
