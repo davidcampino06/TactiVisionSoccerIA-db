@@ -399,4 +399,59 @@ BEGIN
     RAISE NOTICE 'OK audit of track labels, link decisions and dismissed suggestions';
 END $$;
 
+-- 12. Views of linked tracks and of the review (migration 0032), privacy and deletion of the new tables.
+DO $$
+DECLARE
+    row record;
+BEGIN
+    SELECT * INTO row FROM v_track_link_review WHERE analysis_id = 'chk-analysis-b';
+    ASSERT (row.links_pending, row.links_accepted, row.links_rejected, row.role_suggestions,
+            row.role_suggestions_open, row.kits) = (1::bigint, 1::bigint, 0::bigint, 3::bigint, 1::bigint, 2::bigint),
+        format('the review of the clip is wrong: %s', row);
+    ASSERT (SELECT array_agg(ARRAY[track_id, person_track, step] ORDER BY step) FROM v_track_identities
+            WHERE analysis_id = 'chk-analysis-b') = ARRAY[ARRAY[1, 1, 0], ARRAY[2, 1, 1]],
+        'only the accepted link makes a chain';
+    UPDATE track_links SET status = 'ACCEPTED', decided_at = now() WHERE analysis_id = 'chk-analysis-b' AND from_track = 2;
+    ASSERT (SELECT array_agg(ARRAY[track_id, person_track, step] ORDER BY step) FROM v_track_identities
+            WHERE analysis_id = 'chk-analysis-b') = ARRAY[ARRAY[1, 1, 0], ARRAY[2, 1, 1], ARRAY[4, 1, 2]],
+        'tracks 1, 2 and 4 must be one player';
+    UPDATE track_links SET status = 'REJECTED' WHERE analysis_id = 'chk-analysis-b' AND from_track = 1;
+    ASSERT (SELECT array_agg(ARRAY[track_id, person_track] ORDER BY step) FROM v_track_identities
+            WHERE analysis_id = 'chk-analysis-b') = ARRAY[ARRAY[2, 2], ARRAY[4, 2]],
+        'a rejected link cuts the chain';
+    RAISE NOTICE 'OK linked tracks and the review of each clip';
+END $$;
+
+SET LOCAL ROLE tactivision_app;
+SELECT set_config('app.current_user_id', 'chk-coach-b', true),
+       set_config('app.current_role', 'COACH', true),
+       set_config('app.current_team_id', 'chk-team-b', true);
+DO $$
+BEGIN
+    ASSERT (SELECT count(*) FROM track_links) = 0, 'team B must not see the links of team A';
+    ASSERT (SELECT count(*) FROM track_role_suggestions) = 0, 'team B must not see the suggestions of team A';
+    ASSERT (SELECT count(*) FROM v_track_identities) = 0, 'nor the chains through the view';
+    ASSERT (SELECT count(*) FROM v_track_link_review) = 0, 'nor the review of the clips of team A';
+    BEGIN
+        UPDATE track_links SET status = 'REJECTED', decided_at = now() WHERE analysis_id = 'chk-analysis-b';
+        ASSERT NOT FOUND, 'team B must not decide on the links of team A';
+        INSERT INTO track_links (analysis_id, from_track, to_track, from_last_frame, to_first_frame, gap_seconds, distance_heights, confidence)
+        VALUES ('chk-analysis-b', 9, 10, 1, 5, 0.2, 0.1, 0.8);
+        RAISE EXCEPTION 'team B must not add links to an analysis of team A';
+    EXCEPTION WHEN insufficient_privilege THEN
+        NULL;
+    END;
+    RAISE NOTICE 'OK row-level security of track links, role suggestions and their views';
+END $$;
+RESET ROLE;
+
+DO $$
+BEGIN
+    DELETE FROM video_analyses WHERE id = 'chk-analysis-b';
+    ASSERT (SELECT count(*) FROM track_links WHERE analysis_id = 'chk-analysis-b') = 0, 'links must go with the analysis';
+    ASSERT (SELECT count(*) FROM track_role_suggestions WHERE analysis_id = 'chk-analysis-b') = 0,
+        'suggestions must go with the analysis';
+    RAISE NOTICE 'OK links and role suggestions are deleted with their analysis';
+END $$;
+
 ROLLBACK;
