@@ -217,9 +217,9 @@ ADMIN_URL=postgresql://postgres:postgres@localhost:5432/postgres bash scripts/ci
 
 | Archivo | Qué hace | Modifica datos |
 |---|---|---|
-| `sql/verify_rls.sql` | Demostración de Row-Level Security, también en las fotos de trayectorias, sus marcas y los tipos de acción | No |
-| `sql/checks.sql` | Prueba con `ASSERT` la auditoría, que se rechacen 8 filas inválidas, las vistas y RLS a través de ellas; las fotos de trayectorias, los tipos de acción, las marcas de árbitro/externo y los dorsales 0-99 (migraciones 0021 a 0024), con su RLS y su borrado junto al análisis | No (termina en `ROLLBACK`) |
-| `sql/verify_data.sql` | Reporte de salud: reglas sin validar, análisis atascados, videos sin análisis, dorsales repetidos, cuentas sin equipo, fotos sin trayectoria, árbitros con jugador asignado, trayectorias identificadas a medias, tamaño de cada equipo | No (solo lectura) |
+| `sql/verify_rls.sql` | Demostración de Row-Level Security, también en las fotos de trayectorias, sus marcas, los enlaces y sugerencias de la IA y los tipos de acción | No |
+| `sql/checks.sql` | Prueba con `ASSERT` la auditoría, que se rechacen 8 filas inválidas, las vistas y RLS a través de ellas; las fotos de trayectorias, los tipos de acción, las marcas de árbitro/externo y los dorsales 0-99 (migraciones 0021 a 0024); los enlaces entre trayectorias (uno a uno, decisión con fecha), las sugerencias de árbitro o arquero, su auditoría y las cadenas de `v_track_identities` (migraciones 0029 a 0032), con su RLS y su borrado junto al análisis | No (termina en `ROLLBACK`) |
+| `sql/verify_data.sql` | Reporte de salud: reglas sin validar, análisis atascados, videos sin análisis, dorsales repetidos, cuentas sin equipo, fotos sin trayectoria, árbitros con jugador asignado, trayectorias identificadas a medias, enlaces aceptados entre trayectorias con dorsales distintos, enlaces cuyos cuadros ya no coinciden con las detecciones, tamaño de cada equipo | No (solo lectura) |
 
 ## Respaldo y restauración
 
