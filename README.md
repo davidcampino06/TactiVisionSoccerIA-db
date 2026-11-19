@@ -150,6 +150,32 @@ final; 100 trayectorias por clip, ~5 000 detecciones por clip):
 
 La vista recursiva crece con todos los clips de todos los equipos; por eso la app usa la función.
 
+### Estadísticas de cada jugador (sin tabla nueva)
+
+Las estadísticas no se guardan en una tabla: se calculan cada vez desde `detections`, así nunca quedan
+desactualizadas cuando alguien cambia un dorsal o acepta un enlace. Solo cuentan las trayectorias que
+una persona unió a un jugador (`detections.player_id`).
+
+| Dato | De dónde sale |
+|---|---|
+| Segundos en video | Por cada trayectoria de cada análisis, la hora de la última detección menos la de la primera; se suman |
+| Detecciones | Cuántas filas de `detections` tiene el jugador |
+| Partidos | Cuántos análisis distintos tienen al jugador |
+
+La consulta está en el Backend (`GET /api/teams/{id}/player-stats`) y respeta RLS como las demás. La
+vista `v_player_participation` (migración 0009) da detecciones, partidos y análisis por jugador para
+consultarlos desde el SQL Editor de Neon. El orden del ranking lo hace el Frontend con un árbol AVL.
+
+### Eliminar un equipo completo
+
+El administrador puede eliminar un equipo desde la app. No hizo falta una migración: cada tabla que
+pertenece a un equipo ya lo referencia con `ON DELETE CASCADE` (plantilla, partidos, eventos, videos,
+análisis, detecciones, indicadores, posibles problemas, fortalezas, fotos y marcas de trayectorias,
+enlaces, reportes, escudo), así que un solo `DELETE FROM teams` borra todo lo suyo. El Backend borra
+además las cuentas de su entrenador y sus analistas y los archivos de video del disco. Lo que una
+persona eliminada escribió en otras partes queda con el autor en `NULL` (`ON DELETE SET NULL`), y la
+auditoría conserva el registro.
+
 ## Row-Level Security (aislamiento entre equipos)
 
 Es la segunda barrera de seguridad (la primera es la API). Aunque el backend tuviera un error y
