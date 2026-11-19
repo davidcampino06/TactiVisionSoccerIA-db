@@ -531,4 +531,33 @@ BEGIN
 END $$;
 RESET ROLE;
 
+-- 16. A situation of the clip written by the staff (migration 0035): OTHER always with its name, the
+--     name only with OTHER, and from 1 to 30 characters.
+DO $$
+DECLARE
+    bad_rows text[] := ARRAY[
+        $q$UPDATE videos SET situation = 'OTHER', situation_custom = NULL WHERE id = 'chk-video-a'$q$,
+        $q$UPDATE videos SET situation = 'PRESSING', situation_custom = 'Presión tras pérdida' WHERE id = 'chk-video-a'$q$,
+        $q$UPDATE videos SET situation = NULL, situation_custom = 'Presión tras pérdida' WHERE id = 'chk-video-a'$q$,
+        $q$UPDATE videos SET situation = 'OTHER', situation_custom = '   ' WHERE id = 'chk-video-a'$q$,
+        $q$UPDATE videos SET situation = 'OTHER', situation_custom = repeat('x', 31) WHERE id = 'chk-video-a'$q$
+    ];
+    statement text;
+    rejected int := 0;
+BEGIN
+    FOREACH statement IN ARRAY bad_rows LOOP
+        BEGIN
+            EXECUTE statement;
+            RAISE EXCEPTION 'accepted a situation that breaks a rule: %', statement;
+        EXCEPTION WHEN check_violation OR string_data_right_truncation THEN
+            rejected := rejected + 1;
+        END;
+    END LOOP;
+    ASSERT rejected = array_length(bad_rows, 1);
+    UPDATE videos SET situation = 'OTHER', situation_custom = 'Salida de arco corta' WHERE id = 'chk-video-a';
+    UPDATE videos SET situation = 'BUILD_UP', situation_custom = NULL WHERE id = 'chk-video-a';
+    UPDATE videos SET situation = NULL WHERE id = 'chk-video-a';
+    RAISE NOTICE 'OK situations written by the staff (% bad rows rejected)', rejected;
+END $$;
+
 ROLLBACK;
