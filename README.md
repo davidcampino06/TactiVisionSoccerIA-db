@@ -79,6 +79,7 @@ una sola vez, en orden, y queda registrada en la tabla `schema_migrations`.
 | `0032_track_identity_views.sql` | Vistas `v_track_identities` (cada trayectoria de una cadena de enlaces aceptados con la primera de su cadena: el mismo jugador) y `v_track_link_review` (por clip: enlaces por decidir, aceptados, rechazados y sugerencias abiertas), con `security_invoker` |
 | `0033_track_number_rules.sql` | El número de trayectoria nunca es negativo en `detections`, `track_snapshots` y `track_labels`, igual que en las tablas nuevas (NOT VALID: no revisa filas anteriores) |
 | `0034_track_identities_function.sql` | Función `track_identities_of(análisis)`: las cadenas de enlaces aceptados de un solo clip usando los índices (la vista recorre los enlaces de todos los clips); `SECURITY INVOKER`, así que RLS sigue aplicando |
+| `0035_video_situation_custom.sql` | Situación del clip escrita por el cuerpo técnico cuando ninguna fija sirve: `videos.situation` acepta `OTHER` y `videos.situation_custom` guarda el nombre (1 a 30 caracteres), que solo existe con `OTHER` |
 
 Base nueva: primero `sql/schema.sql` y luego las migraciones.
 
